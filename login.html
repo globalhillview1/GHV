@@ -91,7 +91,6 @@
       setSigning(true);
       hideErr();
       try {
-        // IMPORTANT: send action in the BODY (not query string)
         const res = await fetch('/api', {
           method: 'POST',
           headers: { 'content-type': 'application/json', 'accept': 'application/json' },
@@ -100,9 +99,15 @@
         });
 
         const raw = await res.text();
+        console.log('Server response text:', raw);  // <--- logs actual text for debugging
         let json;
         try { json = raw ? JSON.parse(raw) : null; }
-        catch { throw new Error('Invalid server response'); }
+        catch (e) {
+          showErr('Invalid server response');
+          console.error('JSON parse error:', e);
+          setSigning(false);
+          return;
+        }
 
         if (!json?.ok || !json.data?.token) {
           showErr(json?.error || 'Invalid credentials');
