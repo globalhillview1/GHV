@@ -1,4 +1,4 @@
-// Cloudflare Pages Worker — robust API proxy for Google Apps Script
+// Cloudflare Pages Worker — robust API proxy for Google Apps Script 
 // IMPORTANT: use the FINAL googleusercontent URL (macros/echo?...), not script.google.com
 const GAS_API = 'https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLg_luQd5s0v5XOpZkS5JIT-QXR9KT5845cZq6-5IHKAH4Xg5bJEW63Xfgp6yzmqtiiM3HV4tzLXXmrSolxD0MyoCcn0Wu6qRzR4FtmLlb23jYLbM1vtYZCKWXBBgZhBOlQK9fAnYaFKXlHK6wQBz2MmkzzYGnfNp2pHx8vy7sTOVZburR3bcus5SvHNlRX6PMaCShwE9kBxzK7mRcPRqk9aRxrsyzbI9PEagBGHTa9aI-4ck95B5eYDx374w6VAbH7bKsA_6lBtuw8RWpXyUnU-C2Y4bPV643A6eA14Xg-RPCzj0DE&lib=MvUKQG4tLB1zVwA-ZbAsCr_tuZ2tUn3tE';
 
