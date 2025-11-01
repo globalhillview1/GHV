@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <!-- NOTE: Removed <base target="_top"> as this is meant for external hosting -->
+  <!-- NOTE: Removed <base target="_top"> as it's not needed for static file/fetch -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Login | Helpdesk</title>
@@ -16,53 +16,53 @@
     h1{font-size:22px; margin:0 0 8px}
     p{color:var(--muted); margin:0 0 18px}
     label{display:block; font-size:13px; color:var(--muted); margin:10px 0 6px}
-    input{width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:16px; color:var(--text); transition:border-color .2s}
-    input:focus{outline:none; border-color:var(--blue)}
-    button{width:100%; padding:12px; margin-top:16px; border:none; border-radius:8px; font-size:16px; font-weight:600; background:var(--blue); color:var(--card); cursor:pointer; transition:background .2s}
-    button:hover{background:#0b5ed7}
-    button:disabled{background:#adb5bd; cursor:not-allowed}
-    .err{display:none; color:var(--danger); background:#fdd; border:1px solid #f99; border-radius:8px; padding:12px; margin-top:16px; font-size:14px; text-align:center;}
-    .spinner{display:inline-block; border:3px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; width:16px; height:16px; animation:spin 1s linear infinite; vertical-align:middle; margin-right:8px;}
+    input{width:100%; padding:10px 12px; margin-bottom:12px; border:1px solid var(--border); border-radius:8px; font-size:16px; background:var(--bg); color:var(--text); transition:border-color .15s;}
+    input:focus{outline:none; border-color:var(--blue);}
+    .btn{width:100%; padding:10px 12px; border-radius:8px; font-size:16px; background:var(--blue); color:white; border:none; cursor:pointer; transition:background-color .15s;}
+    .btn:hover:not(:disabled){background:#0b5ed7;}
+    .btn:disabled{background:#a0c8f5; cursor:not-allowed;}
+    .spinner{display:none; width:16px; height:16px; border:2px solid #fff; border-top-color:transparent; border-radius:50%; animation:spin 1s linear infinite; margin-right:8px; vertical-align:middle;}
     @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+    .err{display:none; color:var(--danger); background:#fee2e2; border:1px solid #fca5a5; padding:10px; border-radius:8px; margin-bottom:16px; font-size:14px;}
+    .info{font-size:12px; margin-top:20px; color:var(--muted); text-align:center;}
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
       <h1>Helpdesk Login</h1>
-      <p>Sign in with your admin credentials to access the dashboard.</p>
+      <p>Sign in to access the Global Hillview Helpdesk Dashboard.</p>
 
-      <div id="err" class="err">
-        <span id="err_msg"></span>
-      </div>
+      <div id="err" class="err"></div>
+      
+      <!-- NEW: Field for Apps Script URL -->
+      <label for="apiUrl">Apps Script Web App URL (MUST BE CORRECT)</label>
+      <input type="url" id="apiUrl" value="YOUR_APPS_SCRIPT_WEB_APP_URL_HERE" placeholder="https://script.google.com/macros/s/..." required>
 
-      <!-- ADDED id="loginForm" and REMOVED onsubmit attribute -->
-      <form id="loginForm"> 
-        <label for="u">Username</label>
-        <input type="text" id="u" name="u" required>
+      <label for="u">Username</label>
+      <input type="text" id="u" placeholder="Enter your username" required>
 
-        <label for="p">Password</label>
-        <input type="password" id="p" name="p" required>
+      <label for="p">Password</label>
+      <input type="password" id="p" placeholder="Enter your password" required>
 
-        <button id="l" type="submit">
-          <span class="spinner" id="l_spin" style="display:none;"></span>
-          <span id="l_lbl">Sign in</span>
-        </button>
-      </form>
+      <button id="btn" class="btn" onclick="submit()">
+        <span id="spin" class="spinner"></span>
+        <span id="label">Sign in</span>
+      </button>
+
+      <p class="info">
+        Ensure the Apps Script Web App is deployed as 'Anyone' access.
+      </p>
     </div>
   </div>
-  <script>
-    // !! IMPORTANT: REPLACE THIS WITH YOUR DEPLOYED APPS SCRIPT WEB APP URL !!
-    // This URL must point to the '.../exec' endpoint of the web app.
-    // NOTE: The same URL is expected to be used in index.html for API_URL.
-    const API_URL = 'https://script.google.com/macros/s/AKfycbw8ta_GdLedTCp1L-I6QKVcJzbJTgy6-3GfBtHMhrCS0ESlXRi5jHVs0v_AFeM6ZICN/exec';
 
-    const btn = document.getElementById('l');
-    const label = document.getElementById('l_lbl');
-    const spin = document.getElementById('l_spin');
-    const errDiv = document.getElementById('err');
-    const errMsgSpan = document.getElementById('err_msg');
-    const loginForm = document.getElementById('loginForm'); // Reference to the form
+  <script>
+    const btn = document.getElementById('btn');
+    const spin = document.getElementById('spin');
+    const label = document.getElementById('label');
+
+    btn.addEventListener('click', submit);
+    document.addEventListener('keydown', e => { if(e.key === 'Enter') submit(); });
 
     function setLoading(on){
       btn.disabled = !!on;
@@ -72,100 +72,83 @@
     }
 
     function showErr(msg){
-      errMsgSpan.textContent = msg;
-      errDiv.style.display = 'block';
+      const errEl = document.getElementById('err');
+      errEl.textContent = msg;
+      errEl.style.display = 'block';
+      console.error(msg);
     }
 
-    // Exponential backoff retry utility
-    function delay(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
-    
-    async function fetchWithRetry(url, options, maxRetries = 3) {
-        for (let i = 0; i < maxRetries; i++) {
-            try {
-                const response = await fetch(url, options);
-                if (!response.ok && i < maxRetries - 1) {
-                    // Only throw network error if status is OK, but JSON parsing fails
-                    // For status errors, we want to try again
-                    throw new Error(`HTTP Error: ${response.status}`);
-                }
-                return response;
-            } catch (error) {
-                if (i < maxRetries - 1) {
-                    await delay(Math.pow(2, i) * 1000); // Exponential backoff (1s, 2s, 4s)
-                } else {
-                    throw error;
-                }
-            }
-        }
-    }
-
-    // Renamed to handleLogin to be semantically clearer, but we are attaching it to the form submit event
-    async function handleLogin(){
+    async function submit(){
       if (btn.disabled) return;
+      const apiUrl = document.getElementById('apiUrl').value.trim();
       const u = document.getElementById('u').value.trim();
       const p = document.getElementById('p').value;
-      errDiv.style.display = 'none';
+      document.getElementById('err').style.display = 'none';
+      
+      if (apiUrl === "YOUR_APPS_SCRIPT_WEB_APP_URL_HERE") {
+          return showErr("Please replace 'YOUR_APPS_SCRIPT_WEB_APP_URL_HERE' with your actual deployed Apps Script URL.");
+      }
+      if (!u || !p) {
+          return showErr("Please enter both username and password.");
+      }
+
       setLoading(true);
 
-      if (!u || !p) {
-        setLoading(false);
-        return showErr("Please enter both username and password.");
-      }
+      const payload = {
+          op: "login",
+          username: u,
+          password: p
+      };
 
       try {
-        const response = await fetchWithRetry(API_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            op: 'login', // Code.gs doPost expects op: 'login'
-            username: u,
-            password: p
-          })
-        });
+          const response = await fetch(apiUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+              // CORS is the primary reason for "Failed to fetch". 
+              // Setting mode: 'cors' is explicit, but the fix needs to be on the Apps Script side
+              // or by using a proxy (like Cloudflare Worker). We assume direct access for now.
+              mode: 'cors' 
+          });
 
-        const res = await response.json();
-
-        if(res && res.ok && res.redirect){
-          // --- FIX: Extract token and redirect to local index.html ---
-          let token = null;
-          try {
-            // The Apps Script backend returns its own URL with ?session=TOKEN appended. 
-            // We must parse this Apps Script URL to get the token.
-            const scriptUrl = new URL(res.redirect);
-            token = scriptUrl.searchParams.get('session');
-          } catch(e){
-            console.error("Error parsing redirect URL from Apps Script:", e);
+          // Check if the network request itself failed (not HTTP status 400/500, but actual connection)
+          if (!response) {
+              throw new Error("API Connection Failed: No response received.");
           }
 
-          if (token) {
-            localStorage.setItem('session', token);
-            // Redirect the user to the dashboard (index.html) on the CURRENT (external) host.
-            // This prevents the redirect loop by avoiding the Apps Script doGet() as the main dashboard entry.
-            window.location.replace("index.html"); 
+          // Apps Script usually returns 200 even on functional failure, but we check just in case
+          if (!response.ok) {
+               // Handle network/server errors (e.g., 500 status)
+              throw new Error(`Server returned HTTP ${response.status}: ${response.statusText}`);
+          }
+          
+          const res = await response.json();
+          
+          if(res && res.ok && res.redirect){
+            // Persist session token so dashboard can recover it
+            try {
+              var url = new URL(res.redirect);
+              var token = url.searchParams.get('session');
+              if (token) localStorage.setItem('session', token);
+            } catch(e){
+              console.warn("Could not parse redirect URL for session token:", e);
+            }
+            window.location.replace(res.redirect);
           } else {
             setLoading(false);
-            showErr("Login successful, but failed to retrieve session token from the server response.");
+            showErr(res && res.error ? res.error : "Login failed. Check your credentials.");
           }
-          // -------------------------------------------------------------
-        } else {
-          setLoading(false);
-          showErr(res && res.error ? res.error : "Login failed. Check credentials.");
-        }
 
-      } catch(e) {
-        console.error("Fetch/Network Error:", e);
-        setLoading(false);
-        showErr(e && e.message ? `Network/API Error: ${e.message}` : "Failed to connect to the server or unexpected error occurred.");
+      } catch(err) {
+          setLoading(false);
+          // Show a user-friendly error for the "Failed to fetch" (CORS or URL issue)
+          if (err.message.includes("Failed to fetch") || err.message.includes("API Connection Failed")) {
+             showErr("Network Error: Could not connect to the API. This is often caused by an **incorrect Apps Script URL** or a **CORS issue** (browser blocking access).");
+          } else {
+             showErr(err.message || "An unknown error occurred during login.");
+          }
       }
     }
-    
-    // ATTACH THE EVENT LISTENER to prevent default form submission
-    loginForm.addEventListener('submit', async function(e) {
-        e.preventDefault(); // Crucial line to stop page reload
-        await handleLogin();
-    });
 
   </script>
 </body>
