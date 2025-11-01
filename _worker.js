@@ -1,4 +1,4 @@
-// Cloudflare Pages Worker — API proxy to Google Apps Script
+// Cloudflare Pages Worker — robust proxy to Google Apps Script JSON API
 const GAS_API = 'https://script.google.com/macros/s/AKfycbw8ta_GdLedTCp1L-I6QKVcJzbJTgy6-3GfBtHMhrCS0ESlXRi5jHVs0v_AFeM6ZICN/exec';
 const API_SUFFIX = '/api';
 
@@ -8,7 +8,6 @@ function isApiPath(pathname) {
 
 function corsHeaders(origin) {
   const h = new Headers();
-  // echo the actual origin when credentials might be used
   if (origin) h.set('access-control-allow-origin', origin);
   else h.set('access-control-allow-origin', '*');
   h.set('access-control-allow-headers', 'content-type, authorization');
@@ -17,47 +16,52 @@ function corsHeaders(origin) {
   return h;
 }
 
+function copySafeHeaders(reqHeaders) {
+  const out = new Headers();
+  // Forward common headers but skip hop-by-hop and cookie
+  for (const [k, v] of reqHeaders.entries()) {
+    const key = k.toLowerCase();
+    if (['cookie', 'host', 'connection', 'transfer-encoding', 'upgrade', 'keep-alive', 'proxy-authenticate', 'proxy-authorization', 'te', 'trailers'].includes(key)) continue;
+    out.set(k, v);
+  }
+  // Ensure we tell GAS we want JSON back
+  out.set('accept', 'application/json');
+  return out;
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // CORS preflight support
+    // Handle CORS preflight
     if (request.method === 'OPTIONS' && isApiPath(url.pathname)) {
       return new Response(null, { status: 204, headers: corsHeaders(request.headers.get('origin')) });
     }
 
     if (isApiPath(url.pathname)) {
-      // Build upstream URL and carry the query string (?action=login, etc.)
+      // Build upstream URL, preserve query string (e.g., ?action=login)
       const upstream = new URL(GAS_API);
       for (const [k, v] of url.searchParams) upstream.searchParams.set(k, v);
 
-      // Minimal, safe headers to avoid confusing Apps Script
-      const headers = new Headers();
-      const ct = request.headers.get('content-type');
-      if (ct) headers.set('content-type', ct);
-      const auth = request.headers.get('authorization');
-      if (auth) headers.set('authorization', auth);
-      headers.set('accept', 'application/json');
+      // Read body into a reusable buffer to avoid streaming issues
+      const needsBody = !(request.method === 'GET' || request.method === 'HEAD');
+      const body = needsBody ? await request.arrayBuffer() : undefined;
 
       const res = await fetch(upstream.toString(), {
         method: request.method,
-        headers,
-        redirect: 'follow', // follow GAS redirects so you don't get HTML redirect pages
-        body: (request.method === 'GET' || request.method === 'HEAD') ? undefined : request.body
+        headers: copySafeHeaders(request.headers),
+        redirect: 'follow',
+        body
       });
 
-      // Attach CORS headers so the browser can read the JSON body
-      const outHeaders = new Headers(res.headers);
-      corsHeaders(request.headers.get('origin')).forEach((v, k) => outHeaders.set(k, v));
+      // Add CORS headers to upstream response
+      const headers = new Headers(res.headers);
+      corsHeaders(request.headers.get('origin')).forEach((v, k) => headers.set(k, v));
 
-      return new Response(res.body, {
-        status: res.status,
-        statusText: res.statusText,
-        headers: outHeaders
-      });
+      return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
     }
 
-    // Everything else is static content
+    // Static assets
     return env.ASSETS.fetch(request);
   }
 };
