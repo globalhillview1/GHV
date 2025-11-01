@@ -36,7 +36,8 @@
         <span id="err_msg"></span>
       </div>
 
-      <form onsubmit="submit(); return false;">
+      <!-- ADDED id="loginForm" and REMOVED onsubmit attribute -->
+      <form id="loginForm"> 
         <label for="u">Username</label>
         <input type="text" id="u" name="u" required>
 
@@ -61,6 +62,7 @@
     const spin = document.getElementById('l_spin');
     const errDiv = document.getElementById('err');
     const errMsgSpan = document.getElementById('err_msg');
+    const loginForm = document.getElementById('loginForm'); // Reference to the form
 
     function setLoading(on){
       btn.disabled = !!on;
@@ -97,7 +99,8 @@
         }
     }
 
-    async function submit(){
+    // Renamed to handleLogin to be semantically clearer, but we are attaching it to the form submit event
+    async function handleLogin(){
       if (btn.disabled) return;
       const u = document.getElementById('u').value.trim();
       const p = document.getElementById('p').value;
@@ -157,6 +160,13 @@
         showErr(e && e.message ? `Network/API Error: ${e.message}` : "Failed to connect to the server or unexpected error occurred.");
       }
     }
+    
+    // ATTACH THE EVENT LISTENER to prevent default form submission
+    loginForm.addEventListener('submit', async function(e) {
+        e.preventDefault(); // Crucial line to stop page reload
+        await handleLogin();
+    });
+
   </script>
 </body>
 </html>
