@@ -1,4 +1,4 @@
-// Cloudflare Pages Worker — robust proxy to Google Apps Script JSON API
+// Cloudflare Pages Worker — normalizes JSON body to form-encoded for GAS
 const GAS_API = 'https://script.google.com/macros/s/AKfycbw8ta_GdLedTCp1L-I6QKVcJzbJTgy6-3GfBtHMhrCS0ESlXRi5jHVs0v_AFeM6ZICN/exec';
 const API_SUFFIX = '/api';
 
@@ -16,16 +16,17 @@ function corsHeaders(origin) {
   return h;
 }
 
-function copySafeHeaders(reqHeaders) {
+function copyBaseHeaders(reqHeaders) {
   const out = new Headers();
-  // Forward common headers but skip hop-by-hop and cookie
   for (const [k, v] of reqHeaders.entries()) {
     const key = k.toLowerCase();
-    if (['cookie', 'host', 'connection', 'transfer-encoding', 'upgrade', 'keep-alive', 'proxy-authenticate', 'proxy-authorization', 'te', 'trailers'].includes(key)) continue;
+    if (['cookie','host','connection','transfer-encoding','upgrade','keep-alive','proxy-authenticate','proxy-authorization','te','trailers'].includes(key)) continue;
+    // we'll set content-type later if we transform the body
+    if (key === 'content-type') continue;
     out.set(k, v);
   }
-  // Ensure we tell GAS we want JSON back
   out.set('accept', 'application/json');
+  out.set('x-requested-with', 'XMLHttpRequest');
   return out;
 }
 
@@ -33,35 +34,57 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // Handle CORS preflight
+    // CORS preflight
     if (request.method === 'OPTIONS' && isApiPath(url.pathname)) {
       return new Response(null, { status: 204, headers: corsHeaders(request.headers.get('origin')) });
     }
 
     if (isApiPath(url.pathname)) {
-      // Build upstream URL, preserve query string (e.g., ?action=login)
+      // Preserve query (?action=login)
       const upstream = new URL(GAS_API);
       for (const [k, v] of url.searchParams) upstream.searchParams.set(k, v);
+      upstream.searchParams.set('__via', 'cf'); // harmless marker for debugging if needed
 
-      // Read body into a reusable buffer to avoid streaming issues
-      const needsBody = !(request.method === 'GET' || request.method === 'HEAD');
-      const body = needsBody ? await request.arrayBuffer() : undefined;
+      const headers = copyBaseHeaders(request.headers);
+
+      let body;
+      let contentType = request.headers.get('content-type') || '';
+
+      if (request.method === 'GET' || request.method === 'HEAD') {
+        body = undefined;
+      } else if (contentType.includes('application/json')) {
+        // Convert JSON -> x-www-form-urlencoded so GAS can read e.parameter
+        const raw = await request.text();
+        try {
+          const data = raw ? JSON.parse(raw) : {};
+          const params = new URLSearchParams();
+          Object.entries(data || {}).forEach(([k, v]) => params.append(k, String(v)));
+          body = params.toString();
+          headers.set('content-type', 'application/x-www-form-urlencoded;charset=UTF-8');
+        } catch {
+          // If parsing fails, forward as-is
+          body = raw;
+          headers.set('content-type', 'application/json');
+        }
+      } else {
+        // form-encoded or multipart or other — pass through unchanged
+        const buf = await request.arrayBuffer();
+        body = buf;
+        if (contentType) headers.set('content-type', contentType);
+      }
 
       const res = await fetch(upstream.toString(), {
         method: request.method,
-        headers: copySafeHeaders(request.headers),
+        headers,
         redirect: 'follow',
         body
       });
 
-      // Add CORS headers to upstream response
-      const headers = new Headers(res.headers);
-      corsHeaders(request.headers.get('origin')).forEach((v, k) => headers.set(k, v));
-
-      return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
+      const outHeaders = new Headers(res.headers);
+      corsHeaders(request.headers.get('origin')).forEach((v, k) => outHeaders.set(k, v));
+      return new Response(res.body, { status: res.status, statusText: res.statusText, headers: outHeaders });
     }
 
-    // Static assets
     return env.ASSETS.fetch(request);
   }
 };
