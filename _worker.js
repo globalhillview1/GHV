@@ -1,5 +1,6 @@
 // Cloudflare Pages Worker — robust API proxy for Google Apps Script
-const GAS_API = 'https://script.google.com/macros/s/AKfycbw8ta_GdLedTCp1L-I6QKVcJzbJTgy6-3GfBtHMhrCS0ESlXRi5jHVs0v_AFeM6ZICN/exec';
+// IMPORTANT: use the FINAL googleusercontent URL (macros/echo?...), not script.google.com
+const GAS_API = 'https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLg_luQd5s0v5XOpZkS5JIT-QXR9KT5845cZq6-5IHKAH4Xg5bJEW63Xfgp6yzmqtiiM3HV4tzLXXmrSolxD0MyoCcn0Wu6qRzR4FtmLlb23jYLbM1vtYZCKWXBBgZhBOlQK9fAnYaFKXlHK6wQBz2MmkzzYGnfNp2pHx8vy7sTOVZburR3bcus5SvHNlRX6PMaCShwE9kBxzK7mRcPRqk9aRxrsyzbI9PEagBGHTa9aI-4ck95B5eYDx374w6VAbH7bKsA_6lBtuw8RWpXyUnU-C2Y4bPV643A6eA14Xg-RPCzj0DE&lib=MvUKQG4tLB1zVwA-ZbAsCr_tuZ2tUn3tE';
 
 function pickHeaders(reqHeaders) {
   const h = new Headers();
@@ -7,23 +8,20 @@ function pickHeaders(reqHeaders) {
     const v = reqHeaders.get(k);
     if (v) h.set(k, v);
   }
-  // prefer JSON responses
   if (!h.has('accept')) h.set('accept', 'application/json');
   return h;
 }
 
 async function forwardWithRedirectPreserved(url, init) {
-  // first hop (no automatic redirect following)
+  // First hop (don’t auto-follow; keep POST as POST)
   let res = await fetch(url, { ...init, redirect: 'manual' });
 
-  // If Apps Script returns a redirect, re-issue the request to the Location
+  // If Google still returns a redirect, replay to Location with same method+body
   const loc = res.headers.get('location');
   if (loc && [301, 302, 303, 307, 308].includes(res.status)) {
-    // Re-play original method + body so POST stays POST
     res = await fetch(loc, { ...init, redirect: 'manual' });
   }
 
-  // sanitize response headers
   const out = new Headers(res.headers);
   out.delete('set-cookie');
   out.set('cache-control', 'no-store');
@@ -39,7 +37,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // Handle preflight or stray OPTIONS (defensive)
+    // Handle stray OPTIONS on /api (defensive)
     if (request.method === 'OPTIONS' && url.pathname.startsWith('/api')) {
       return new Response('', {
         status: 204,
@@ -54,30 +52,22 @@ export default {
 
     // Proxy /api and /api/* to GAS
     if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
-      // Build upstream URL (no extra path on GAS web app)
       const upstream = new URL(GAS_API);
-      // Pass through query params
+      // Preserve all query params from the page request
       for (const [k, v] of url.searchParams) upstream.searchParams.set(k, v);
 
-      // Copy safe headers
       const headers = pickHeaders(request.headers);
 
-      // Clone body for non-GET/HEAD
       let body;
       if (request.method !== 'GET' && request.method !== 'HEAD') {
-        body = await request.arrayBuffer();
+        body = await request.arrayBuffer(); // clone body once
       }
 
-      const init = {
-        method: request.method,
-        headers,
-        body
-      };
-
+      const init = { method: request.method, headers, body };
       return forwardWithRedirectPreserved(upstream.toString(), init);
     }
 
-    // Everything else: serve static assets
+    // Static assets served by Pages
     return env.ASSETS.fetch(request);
   }
 };
