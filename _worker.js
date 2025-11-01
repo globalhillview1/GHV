@@ -1,10 +1,9 @@
-// Cloudflare Pages Worker — robust API proxy to Google Apps Script
+// Cloudflare Pages Worker — handles /api, ./api, and /something/api paths correctly
 const GAS_API = 'https://script.google.com/macros/s/AKfycbw8ta_GdLedTCp1L-I6QKVcJzbJTgy6-3GfBtHMhrCS0ESlXRi5jHVs0v_AFeM6ZICN/exec';
-const API_SUFFIX = '/api';
 
 function isApiPath(pathname) {
-  // handles '/api' and '/something/api'
-  return pathname === API_SUFFIX || pathname.endsWith(API_SUFFIX);
+  // Handles '/api', './api', 'api', and nested '/something/api'
+  return pathname === '/api' || pathname.endsWith('/api');
 }
 
 function corsHeaders(origin) {
@@ -20,17 +19,25 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // Preflight for CORS
+    // Handle relative API requests (like "api?action=login")
+    if (!url.pathname.startsWith('/api') && url.pathname.endsWith('api')) {
+      url.pathname = '/api';
+    }
+
+    // Handle CORS preflight
     if (request.method === 'OPTIONS' && isApiPath(url.pathname)) {
-      return new Response(null, { status: 204, headers: corsHeaders(request.headers.get('origin')) });
+      return new Response(null, {
+        status: 204,
+        headers: corsHeaders(request.headers.get('origin')),
+      });
     }
 
     if (isApiPath(url.pathname)) {
-      // Build upstream URL with original query string
       const upstream = new URL(GAS_API);
-      for (const [k, v] of url.searchParams) upstream.searchParams.set(k, v);
+      for (const [k, v] of url.searchParams.entries()) {
+        upstream.searchParams.set(k, v);
+      }
 
-      // Copy only safe/needed headers
       const headers = new Headers();
       for (const h of ['content-type', 'authorization', 'cookie']) {
         const v = request.headers.get(h);
@@ -38,20 +45,36 @@ export default {
       }
       headers.set('accept', 'application/json');
 
-      const res = await fetch(upstream.toString(), {
-        method: request.method,
-        headers,
-        redirect: 'follow',
-        body: (request.method === 'GET' || request.method === 'HEAD') ? undefined : request.body
-      });
+      try {
+        const res = await fetch(upstream.toString(), {
+          method: request.method,
+          headers,
+          redirect: 'follow',
+          body:
+            request.method === 'GET' || request.method === 'HEAD'
+              ? undefined
+              : request.body,
+        });
 
-      // Pass through response + CORS
-      const outHeaders = new Headers(res.headers);
-      corsHeaders(request.headers.get('origin')).forEach((v, k) => outHeaders.set(k, v));
-      return new Response(res.body, { status: res.status, statusText: res.statusText, headers: outHeaders });
+        const outHeaders = new Headers(res.headers);
+        corsHeaders(request.headers.get('origin')).forEach((v, k) =>
+          outHeaders.set(k, v)
+        );
+
+        return new Response(res.body, {
+          status: res.status,
+          statusText: res.statusText,
+          headers: outHeaders,
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ error: 'Proxy failed', details: err.message }), {
+          status: 500,
+          headers: corsHeaders(request.headers.get('origin')),
+        });
+      }
     }
 
-    // Static assets (/, /login, etc.)
+    // Fallback to static assets
     return env.ASSETS.fetch(request);
-  }
+  },
 };
