@@ -1,12 +1,11 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <base target="_top">
+  <!-- NOTE: Removed <base target="_top"> as this is meant for external hosting -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Login | Helpdesk</title>
   <style>
-    /* Clean, modern, responsive styling using CSS variables */
     :root{
       --card:#ffffff; --bg:#f7f9fc; --border:#e5e7eb; --muted:#6b7280; --text:#0f172a; --blue:#0d6efd; --danger:#ef4444;
     }
@@ -17,13 +16,14 @@
     h1{font-size:22px; margin:0 0 8px}
     p{color:var(--muted); margin:0 0 18px}
     label{display:block; font-size:13px; color:var(--muted); margin:10px 0 6px}
-    input{width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:16px; margin-bottom:12px;}
-    button{width:100%; background:var(--blue); color:white; padding:10px 12px; border:none; border-radius:8px; font-size:16px; cursor:pointer; margin-top:10px; transition:background .2s;}
-    button:hover:not(:disabled){background:#0a58ca;}
-    button:disabled{background:#6c757d; cursor:not-allowed;}
-    .err{display:none; color:var(--danger); border:1px solid var(--danger); background:#fecaca; padding:10px; border-radius:8px; margin-bottom:12px; font-size:14px;}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    .spinner{display:inline-block; width:1em; height:1em; border:.15em solid white; border-top-color:transparent; border-radius:50%; animation:spin 1s linear infinite; vertical-align:middle; margin-left:.5em;}
+    input{width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:16px; color:var(--text); transition:border-color .2s}
+    input:focus{outline:none; border-color:var(--blue)}
+    button{width:100%; padding:12px; margin-top:16px; border:none; border-radius:8px; font-size:16px; font-weight:600; background:var(--blue); color:var(--card); cursor:pointer; transition:background .2s}
+    button:hover{background:#0b5ed7}
+    button:disabled{background:#adb5bd; cursor:not-allowed}
+    .err{display:none; color:var(--danger); background:#fdd; border:1px solid #f99; border-radius:8px; padding:12px; margin-top:16px; font-size:14px; text-align:center;}
+    .spinner{display:inline-block; border:3px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; width:16px; height:16px; animation:spin 1s linear infinite; vertical-align:middle; margin-right:8px;}
+    @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
   </style>
 </head>
 <body>
@@ -32,37 +32,35 @@
       <h1>Helpdesk Login</h1>
       <p>Sign in with your admin credentials to access the dashboard.</p>
 
-      <div id="err" class="err"></div>
+      <div id="err" class="err">
+        <span id="err_msg"></span>
+      </div>
 
-      <label for="u">Username</label>
-      <input type="text" id="u" placeholder="Enter username" autocomplete="username">
+      <form onsubmit="submit(); return false;">
+        <label for="u">Username</label>
+        <input type="text" id="u" name="u" required>
 
-      <label for="p">Password</label>
-      <input type="password" id="p" placeholder="Enter password" autocomplete="current-password">
+        <label for="p">Password</label>
+        <input type="password" id="p" name="p" required>
 
-      <button id="btn" aria-busy="false">
-        <span id="label">Sign in</span>
-        <span id="spin" class="spinner" style="display:none;"></span>
-      </button>
-
-      <p style="margin-top:20px; text-align:center; font-size:12px; color:var(--muted)">Powered by Google Apps Script</p>
+        <button id="l" type="submit">
+          <span class="spinner" id="l_spin" style="display:none;"></span>
+          <span id="l_lbl">Sign in</span>
+        </button>
+      </form>
     </div>
   </div>
-
   <script>
-    const btn = document.getElementById('btn');
-    const label = document.getElementById('label');
-    const spin = document.getElementById('spin');
+    // !! IMPORTANT: REPLACE THIS WITH YOUR DEPLOYED APPS SCRIPT WEB APP URL !!
+    // This URL must point to the '.../exec' endpoint of the web app.
+    // NOTE: The same URL is expected to be used in index.html for API_URL.
+    const API_URL = 'https://script.google.com/macros/s/AKfycbw8ta_GdLedTCp1L-I6QKVcJzbJTgy6-3GfBtHMhrCS0ESlXRi5jHVs0v_AFeM6ZICN/exec';
 
-    // !!! CRITICAL STEP: REPLACE THIS WITH YOUR DEPLOYED GAS WEB APP EXEC URL !!!
-    // It should look like: https://script.google.com/macros/s/AKfycb.../exec
-    // The placeholder URL below is intentionally set to trigger the config error.
-    const PLACEHOLDER_URL = 'https://script.google.com/macros/s/AKfycbw8ta_GdLedTCp1L-I6QKVcJzbJTgy6-3GfBtHMhrCS0ESlXRi5jHVs0v_AFeM6ZICN/exec';
-    const GAS_API_URL = PLACEHOLDER_URL; 
-    // --------------------------------------------------------------------------
-
-    document.getElementById('btn').addEventListener('click', submit);
-    document.addEventListener('keydown', e => { if(e.key === 'Enter') submit(); });
+    const btn = document.getElementById('l');
+    const label = document.getElementById('l_lbl');
+    const spin = document.getElementById('l_spin');
+    const errDiv = document.getElementById('err');
+    const errMsgSpan = document.getElementById('err_msg');
 
     function setLoading(on){
       btn.disabled = !!on;
@@ -71,95 +69,93 @@
       spin.style.display = on ? 'inline-block' : 'none';
     }
 
-    /** Handles the login attempt using the modern fetch API */
+    function showErr(msg){
+      errMsgSpan.textContent = msg;
+      errDiv.style.display = 'block';
+    }
+
+    // Exponential backoff retry utility
+    function delay(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+    
+    async function fetchWithRetry(url, options, maxRetries = 3) {
+        for (let i = 0; i < maxRetries; i++) {
+            try {
+                const response = await fetch(url, options);
+                if (!response.ok && i < maxRetries - 1) {
+                    // Only throw network error if status is OK, but JSON parsing fails
+                    // For status errors, we want to try again
+                    throw new Error(`HTTP Error: ${response.status}`);
+                }
+                return response;
+            } catch (error) {
+                if (i < maxRetries - 1) {
+                    await delay(Math.pow(2, i) * 1000); // Exponential backoff (1s, 2s, 4s)
+                } else {
+                    throw error;
+                }
+            }
+        }
+    }
+
     async function submit(){
       if (btn.disabled) return;
       const u = document.getElementById('u').value.trim();
       const p = document.getElementById('p').value;
-      
-      document.getElementById('err').style.display = 'none';
+      errDiv.style.display = 'none';
       setLoading(true);
 
-      if (GAS_API_URL === PLACEHOLDER_URL) {
-          fail(new Error("Configuration Error: Please update GAS_API_URL in login.html."));
-          return;
-      }
-      
-      // Basic client-side validation
       if (!u || !p) {
         setLoading(false);
-        showErr("Please enter both username and password.");
-        return;
+        return showErr("Please enter both username and password.");
       }
 
       try {
-        const response = await fetch(GAS_API_URL, {
+        const response = await fetchWithRetry(API_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json'
+          },
           body: JSON.stringify({
-            op: 'login', // Matches the 'op' expected by your Code.gs doPost function
+            op: 'login', // Code.gs doPost expects op: 'login'
             username: u,
             password: p
           })
         });
 
         const res = await response.json();
-        
-        // Use the custom 'ok' field from the GAS JSON response for authentication status
-        if (response.ok) {
-          handle(res);
-        } else {
-          // Fallback error if HTTP status is bad, but the server still returned JSON
-          fail(new Error(res.error || `Server error: ${response.status} ${response.statusText}`));
-        }
-        
-      } catch(err) {
-        // Catch network or JSON parsing errors
-        fail(err);
-      }
-    }
-    
-    // Logic to handle successful response
-    function handle(res){
-      if(res && res.ok && res.redirect){
-        // 1. Get the session token from the redirect URL returned by Apps Script
-        let token = null;
-        try {
-          // Use URL API for robust token extraction
-          const url = new URL(res.redirect);
-          token = url.searchParams.get('session');
-        } catch(e){
-          console.error("URL parsing error:", e);
-        }
-        
-        if (token) {
-          // 2. Persist session token
-          localStorage.setItem('session', token);
-          
-          // 3. Redirect to the static site's root page ('/') to load the dashboard
-          window.location.replace('/'); 
+
+        if(res && res.ok && res.redirect){
+          // --- FIX: Extract token and redirect to local index.html ---
+          let token = null;
+          try {
+            // The Apps Script backend returns its own URL with ?session=TOKEN appended. 
+            // We must parse this Apps Script URL to get the token.
+            const scriptUrl = new URL(res.redirect);
+            token = scriptUrl.searchParams.get('session');
+          } catch(e){
+            console.error("Error parsing redirect URL from Apps Script:", e);
+          }
+
+          if (token) {
+            localStorage.setItem('session', token);
+            // Redirect the user to the dashboard (index.html) on the CURRENT (external) host.
+            // This prevents the redirect loop by avoiding the Apps Script doGet() as the main dashboard entry.
+            window.location.replace("index.html"); 
+          } else {
+            setLoading(false);
+            showErr("Login successful, but failed to retrieve session token from the server response.");
+          }
+          // -------------------------------------------------------------
         } else {
           setLoading(false);
-          showErr("Login succeeded but session token was missing.");
+          showErr(res && res.error ? res.error : "Login failed. Check credentials.");
         }
-      } else {
+
+      } catch(e) {
+        console.error("Fetch/Network Error:", e);
         setLoading(false);
-        // Display the specific error message sent from the Apps Script backend
-        showErr(res && res.error ? res.error : "Login failed. Check username and password.");
+        showErr(e && e.message ? `Network/API Error: ${e.message}` : "Failed to connect to the server or unexpected error occurred.");
       }
-    }
-
-    // Logic to handle failed requests (network/CORS/unexpected server error)
-    function fail(err){
-      setLoading(false);
-      showErr(err && err.message ? err.message : "Network error. Please ensure the Apps Script URL is correct and deployed for 'Anyone' access.");
-      console.error("Fetch failed:", err);
-    }
-
-    function showErr(msg){
-      const errEl = document.getElementById('err');
-      errEl.textContent = msg;
-      errEl.style.display = 'block';
     }
   </script>
 </body>
