@@ -1,21 +1,27 @@
-// Single token read + redirect
-const token = localStorage.getItem('enviro_token');
+// Session storage keys (consistent across app + login)
+const TOKEN_KEY = 'enviro_token';
+const USER_KEY  = 'enviro_user';
+
+// Redirect to login if no token
+const token = localStorage.getItem(TOKEN_KEY);
 if (!token) {
   if (location.pathname !== '/login.html') location.href = '/login.html';
 }
 
-async function apiGet(path, params = {}) {
-  const qs = new URLSearchParams({ ...params, token }).toString();
-  const res = await fetch(`/api/${path}?${qs}`, { headers: { 'accept': 'application/json' } });
+// API helpers: we call /api with ?action=<name>
+async function apiGet(action, params = {}) {
+  const qs = new URLSearchParams({ action, ...params, token }).toString();
+  const res = await fetch(`/api?${qs}`, { headers: { 'accept': 'application/json' }, cache: 'no-store' });
   return res.json();
 }
 
-async function apiPost(path, body = {}) {
-  const qs = new URLSearchParams({ token }).toString();
-  const res = await fetch(`/api/${path}?${qs}`, {
+async function apiPost(action, body = {}) {
+  const qs = new URLSearchParams({ action, token }).toString();
+  const res = await fetch(`/api?${qs}`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body)
+    headers: { 'content-type': 'application/json', 'accept': 'application/json' },
+    body: JSON.stringify(body),
+    cache: 'no-store'
   });
   return res.json();
 }
@@ -40,10 +46,10 @@ async function ensureSession(){
     return;
   }
   try {
-    const res = await apiGet('whoami'); // expects {ok:true, data:{username, role}}
+    const res = await apiGet('whoami'); // {ok:true, data:{username, role}}
     if (!res.ok || !res.data) throw new Error('unauthorized');
 
-    localStorage.setItem('enviro_user', JSON.stringify(res.data));
+    localStorage.setItem(USER_KEY, JSON.stringify(res.data));
 
     const ub = document.getElementById('userBadge');
     if (ub) {
@@ -51,8 +57,8 @@ async function ensureSession(){
       ub.innerHTML = `${userSvg()}<span>${escapeHtml(res.data.username || '')}</span>`;
     }
   } catch (e) {
-    localStorage.removeItem('enviro_token');
-    localStorage.removeItem('enviro_user');
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
     if (location.pathname !== '/login.html') location.replace('/login.html');
   }
 }
@@ -75,7 +81,7 @@ function el(tag, attrs = {}, ...children) {
 async function loadStats() {
   const res = await apiGet('stats');
   if (!res.ok) return;
-  const s = res.data;
+  const s = res.data || {};
   document.getElementById('stat-total')?.textContent = s.total ?? '-';
   document.getElementById('stat-open') ?.textContent = s.open ?? '-';
   document.getElementById('stat-inp')  ?.textContent = s.inProgress ?? '-';
@@ -154,8 +160,8 @@ async function loadIssues() {
 
 document.getElementById('apply')?.addEventListener('click', loadIssues);
 document.getElementById('logoutBtn')?.addEventListener('click', () => {
-  localStorage.removeItem('enviro_token');
-  localStorage.removeItem('enviro_user');
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
   location.href = '/login.html';
 });
 
