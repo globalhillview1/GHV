@@ -38,31 +38,35 @@
   </div>
 
   <script type="module">
-    import { apiPost, setToken } from './app.js';
+  import { apiPost, setToken } from '/app.js';  // absolute path
 
-    const $ = (s)=>document.querySelector(s);
-    const showErr = (msg)=>{ const e=$("#error"); e.textContent=msg; e.style.display='block'; };
+  const $ = (s)=>document.querySelector(s);
+  const showErr = (msg)=>{ const e=$("#error"); e.textContent=msg; e.style.display='block'; };
 
-    $("#signin").addEventListener("click", async ()=>{
-      $("#error").style.display='none';
-      const username = $("#username").value.trim();
-      const password = $("#password").value;
+  $("#signin").addEventListener("click", async ()=>{
+    $("#error").style.display='none';
+    const username = $("#username").value.trim();
+    const password = $("#password").value;
 
-      if (!username || !password) { showErr("Please enter username and password."); return; }
+    if (!username || !password) { showErr("Please enter username and password."); return; }
 
+    try {
       const r = await apiPost('login', { username, password }, false);
       if (!r || !r.ok || !r.token) { showErr(r?.error || "Network error. Please try again."); return; }
-
       setToken(r.token);
-      window.location.replace('/index.html');
-    });
+      window.location.replace('/index.html');   // absolute path
+    } catch (err) {
+      showErr(err?.message || "Unexpected error.");
+    }
+  });
 
-    // Enter key
-    ["#username","#password"].forEach(sel=>{
-      document.querySelector(sel).addEventListener('keydown', e=>{
-        if(e.key==='Enter') $("#signin").click();
-      });
+  // Enter key support
+  ["#username","#password"].forEach(sel=>{
+    document.querySelector(sel).addEventListener('keydown', e=>{
+      if(e.key==='Enter') document.querySelector("#signin").click();
     });
-  </script>
+  });
+</script>
+
 </body>
 </html>
