@@ -37,11 +37,15 @@
     <div class="hint">Tip: ask an admin to create or reset your account.</div>
   </div>
 
-  <script type="module">
-  import { apiPost, setToken } from '/app.js';  // absolute path
+ <script type="module">
+  import { apiPost, setToken } from '/app.js'; // absolute path from site root
 
   const $ = (s)=>document.querySelector(s);
-  const showErr = (msg)=>{ const e=$("#error"); e.textContent=msg; e.style.display='block'; };
+  const showErr = (msg)=>{
+    const e=$("#error");
+    e.textContent = (typeof msg === 'string' && msg) ? msg : 'Network error. Please try again.';
+    e.style.display='block';
+  };
 
   $("#signin").addEventListener("click", async ()=>{
     $("#error").style.display='none';
@@ -52,21 +56,26 @@
 
     try {
       const r = await apiPost('login', { username, password }, false);
-      if (!r || !r.ok || !r.token) { showErr(r?.error || "Network error. Please try again."); return; }
+      if (!r || !r.ok || !r.token) {
+        // If worker wrapped upstream HTML/redirect, you'll see the text here:
+        showErr(r?.error || r?.message || "Login failed.");
+        return;
+      }
       setToken(r.token);
-      window.location.replace('/index.html');   // absolute path
+      window.location.replace('/index.html');
     } catch (err) {
       showErr(err?.message || "Unexpected error.");
     }
   });
 
-  // Enter key support
-  ["#username","#password"].forEach(sel=>{
+  // Enter key
+  for (const sel of ["#username","#password"]) {
     document.querySelector(sel).addEventListener('keydown', e=>{
       if(e.key==='Enter') document.querySelector("#signin").click();
     });
-  });
+  }
 </script>
+
 
 </body>
 </html>
