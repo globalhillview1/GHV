@@ -1,128 +1,155 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <!-- Favicons -->
-  <link rel="icon" href="/logo.svg" type="image/svg+xml">
-  <link rel="alternate icon" href="/favicon.ico">
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <link rel="manifest" href="/site.webmanifest">
-
+  <base target="_top">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Login | Helpdesk</title>
   <style>
-    :root{ --card:#ffffff; --bg:#f7f9fc; --border:#e5e7eb; --muted:#6b7280; --text:#0f172a; --blue:#0d6efd; --danger:#ef4444; }
+    :root{
+      --card:#ffffff; --bg:#f7f9fc; --border:#e5e7eb; --muted:#6b7280; --text:#0f172a; --blue:#0d6efd; --danger:#ef4444;
+    }
     *{box-sizing:border-box}
     body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans"; background:var(--bg); color:var(--text);}
     .wrap{min-height:100vh; display:grid; place-items:center; padding:24px;}
     .card{width:100%; max-width:420px; background:var(--card); border:1px solid var(--border); border-radius:16px; padding:24px; box-shadow:0 8px 24px rgba(0,0,0,.06)}
-    .logo{display:block; margin:4px auto 12px; width:72px; height:72px; border-radius:12px}
     h1{font-size:22px; margin:0 0 8px}
     p{color:var(--muted); margin:0 0 18px}
     label{display:block; font-size:13px; color:var(--muted); margin:10px 0 6px}
-    input{width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:10px;}
-    button{width:100%; margin-top:16px; padding:10px 12px; border-radius:10px; border:0; background:var(--blue); color:#fff; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:8px}
-    button:disabled{opacity:.85; cursor:default}
-    .err{margin-top:10px; color:#fff; background:var(--danger); border-radius:10px; padding:8px 12px; display:none; white-space:pre-line}
-    .muted{color:var(--muted); font-size:12px; margin-top:12px; text-align:center}
-    /* tiny spinner */
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .spinner{ width:16px; height:16px; border-radius:50%;
-      border:2px solid currentColor; border-right-color:transparent;
-      display:inline-block; animation:spin .7s linear infinite }
+    input{width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:16px; margin-bottom:12px;}
+    button{width:100%; background:var(--blue); color:white; padding:10px 12px; border:none; border-radius:8px; font-size:16px; cursor:pointer; margin-top:10px; transition:background .2s;}
+    button:hover:not(:disabled){background:#0a58ca;}
+    button:disabled{background:#6c757d; cursor:not-allowed;}
+    .err{display:none; color:var(--danger); border:1px solid var(--danger); background:#fecaca; padding:10px; border-radius:8px; margin-bottom:12px; font-size:14px;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .spinner{display:inline-block; width:1em; height:1em; border:.15em solid white; border-top-color:transparent; border-radius:50%; animation:spin 1s linear infinite; vertical-align:middle; margin-left:.5em;}
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
-      <img class="logo" src="/android-chrome-512x512.png" alt="Global Hillview logo" width="72" height="72">
-      <h1>Sign in</h1>
-      <p>Enter your credentials to access the Global Hillview Helpdesk Dashboard.</p>
-
-      <label>Username</label>
-      <input id="u" type="text" autocomplete="username" autofocus>
-
-      <label>Password</label>
-      <input id="p" type="password" autocomplete="current-password">
-
-      <button id="btn"><span class="lbl">Sign in</span></button>
+      <h1>Helpdesk Login</h1>
+      <p>Sign in with your admin credentials to access the dashboard.</p>
 
       <div id="err" class="err"></div>
-      <div class="muted">Tip: ask an admin to create or reset your account.</div>
+
+      <label for="u">Username</label>
+      <input type="text" id="u" placeholder="Enter username" autocomplete="username">
+
+      <label for="p">Password</label>
+      <input type="password" id="p" placeholder="Enter password" autocomplete="current-password">
+
+      <button id="btn" aria-busy="false">
+        <span id="label">Sign in</span>
+        <span id="spin" class="spinner" style="display:none;"></span>
+      </button>
+
+      <p style="margin-top:20px; text-align:center; font-size:12px; color:var(--muted)">Powered by Google Apps Script</p>
     </div>
   </div>
 
   <script>
-    // Already signed in? go home
-    try { if (localStorage.getItem('token')) location.replace('/'); } catch(e){}
+    const btn = document.getElementById('btn');
+    const label = document.getElementById('label');
+    const spin = document.getElementById('spin');
 
-    const showErr = (msg) => {
-      const el = document.getElementById('err');
-      el.textContent = msg;
-      el.style.display = 'block';
-    };
-    const hideErr = () => {
-      const el = document.getElementById('err');
-      el.textContent = '';
-      el.style.display = 'none';
-    };
+    // !!! CRITICAL STEP: REPLACE THIS WITH YOUR DEPLOYED GAS WEB APP EXEC URL !!!
+    // It should look like: https://script.google.com/macros/s/AKfycb.../exec
+    const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbw8ta_GdLedTCp1L-I6QKVcJzbJTgy6-3GfBtHMhrCS0ESlXRi5jHVs0v_AFeM6ZICN/exec';
+    // --------------------------------------------------------------------------
 
-    const saveSession = (token, user) => {
-      try {
-        localStorage.setItem('token', token);
-        localStorage.setItem('role', user?.role || 'user');
-        localStorage.setItem('username', user?.username || '');
-      } catch {}
-    };
+    document.getElementById('btn').addEventListener('click', submit);
+    document.addEventListener('keydown', e => { if(e.key === 'Enter') submit(); });
 
-    function setSigning(on){
-      const btn = document.getElementById('btn');
-      if (on){
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner" aria-hidden="true"></span><span class="lbl">Signing in…</span>';
-      } else {
-        btn.disabled = false;
-        btn.innerHTML = '<span class="lbl">Sign in</span>';
-      }
+    function setLoading(on){
+      btn.disabled = !!on;
+      btn.setAttribute('aria-busy', on ? 'true' : 'false');
+      label.textContent = on ? 'Signing in…' : 'Sign in';
+      spin.style.display = on ? 'inline-block' : 'none';
     }
 
-    async function doLogin() {
+    // --- UPDATED: Using standard fetch API instead of google.script.run ---
+    async function submit(){
+      if (btn.disabled) return;
       const u = document.getElementById('u').value.trim();
       const p = document.getElementById('p').value;
-      if (!u || !p) { showErr('Missing username or password.'); return; }
+      document.getElementById('err').style.display = 'none';
+      setLoading(true);
 
-      setSigning(true);
-      hideErr();
+      if (GAS_API_URL.includes('https://script.google.com/macros/s/AKfycbw8ta_GdLedTCp1L-I6QKVcJzbJTgy6-3GfBtHMhrCS0ESlXRi5jHVs0v_AFeM6ZICN/exec')) {
+         fail(new Error("Configuration Error: Please update GAS_API_URL in login.html."));
+         return;
+      }
+
       try {
-        const res = await fetch('/api?action=login', {
+        const response = await fetch(GAS_API_URL, {
           method: 'POST',
-          headers: { 'content-type': 'application/json', 'accept': 'application/json' },
-          body: JSON.stringify({ username: u, password: p }),
-          cache: 'no-store'
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            op: 'login', // This matches the 'op' handled by your Code.gs doPost
+            username: u,
+            password: p
+          })
         });
-        const json = await res.json();
-        if (!json.ok) { showErr(json.error || 'Invalid credentials'); setSigning(false); return; }
-        saveSession(json.data.token, json.data.user);
-        setTimeout(()=>location.replace('/'), 250);
-      } catch {
-        showErr('Network error. Please try again.');
-        setSigning(false);
+
+        const res = await response.json();
+        
+        // Check for good HTTP status and then process the custom 'ok' field from GAS
+        if (response.ok) {
+          handle(res);
+        } else {
+          // If HTTP status is bad (e.g., 500)
+          fail(new Error(res.error || `Server error: ${response.status} ${response.statusText}`));
+        }
+        
+      } catch(err) {
+        // This catches true network/CORS issues
+        fail(err);
+      }
+    }
+    // -----------------------------------------------------------------------
+
+
+    // Logic to handle successful response
+    function handle(res){
+      if(res && res.ok && res.redirect){
+        // 1. Get the session token from the redirect URL returned by Apps Script
+        let token = null;
+        try {
+          var url = new URL(res.redirect);
+          token = url.searchParams.get('session');
+        } catch(e){
+          console.error("URL parsing error:", e);
+        }
+        
+        if (token) {
+          // 2. Persist session token
+          localStorage.setItem('session', token);
+          
+          // 3. CRITICAL FIX: Redirect to the static site's root page ('/')
+          // The token will be used by index.html to fetch data via the API.
+          window.location.replace('/'); 
+        } else {
+          setLoading(false);
+          showErr("Login succeeded but session token was missing.");
+        }
+      } else {
+        setLoading(false);
+        showErr(res && res.error ? res.error : "Login failed.");
       }
     }
 
-    // Wire up events
-    document.getElementById('btn').addEventListener('click', doLogin);
-    document.addEventListener('keydown', (e)=>{
-      const btn = document.getElementById('btn');
-      if (e.key === 'Enter') {
-        if (btn.disabled) return; // prevent double submit
-        doLogin();
-      }
-    });
-    document.getElementById('u').addEventListener('input', hideErr);
-    document.getElementById('p').addEventListener('input', hideErr);
+    function fail(err){
+      setLoading(false);
+      showErr(err && err.message ? err.message : "Network error. Please ensure the Apps Script URL is correct and deployed for 'Anyone' access.");
+      console.error("Fetch failed:", err);
+    }
+
+    function showErr(msg){
+      const errEl = document.getElementById('err');
+      errEl.textContent = msg;
+      errEl.style.display = 'block';
+    }
   </script>
 </body>
 </html>
