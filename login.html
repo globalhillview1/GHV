@@ -91,20 +91,21 @@
       setSigning(true);
       hideErr();
       try {
-        const qs = new URLSearchParams({ action: 'login' }).toString();
-        const res = await fetch(`/api?${qs}`, {
+        // IMPORTANT: send action in the BODY (not query string)
+        const res = await fetch('/api', {
           method: 'POST',
           headers: { 'content-type': 'application/json', 'accept': 'application/json' },
-          body: JSON.stringify({ username: u, password: p }),
+          body: JSON.stringify({ action: 'login', username: u, password: p }),
           cache: 'no-store'
         });
 
         const raw = await res.text();
         let json;
-        try { json = JSON.parse(raw); } catch { throw new Error('Invalid server response'); }
+        try { json = raw ? JSON.parse(raw) : null; }
+        catch { throw new Error('Invalid server response'); }
 
-        if (!json.ok || !json.data?.token) {
-          showErr(json.error || 'Invalid credentials');
+        if (!json?.ok || !json.data?.token) {
+          showErr(json?.error || 'Invalid credentials');
           setSigning(false);
           return;
         }
@@ -113,9 +114,10 @@
         localStorage.setItem(TOKEN_KEY, json.data.token);
         localStorage.setItem(USER_KEY, JSON.stringify(json.data.user || {}));
 
-        setTimeout(() => location.replace('/'), 250);
+        setTimeout(() => location.replace('/'), 200);
       } catch (err) {
-        showErr('Network error. Please try again.');
+        console.error('Login failed:', err);
+        showErr(err.message || 'Network error. Please try again.');
         setSigning(false);
       }
     }
