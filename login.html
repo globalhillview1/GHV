@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Login | Helpdesk</title>
   <style>
+    /* Clean, modern, responsive styling using CSS variables */
     :root{
       --card:#ffffff; --bg:#f7f9fc; --border:#e5e7eb; --muted:#6b7280; --text:#0f172a; --blue:#0d6efd; --danger:#ef4444;
     }
@@ -55,7 +56,9 @@
 
     // !!! CRITICAL STEP: REPLACE THIS WITH YOUR DEPLOYED GAS WEB APP EXEC URL !!!
     // It should look like: https://script.google.com/macros/s/AKfycb.../exec
-    const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbw8ta_GdLedTCp1L-I6QKVcJzbJTgy6-3GfBtHMhrCS0ESlXRi5jHVs0v_AFeM6ZICN/exec';
+    // The placeholder URL below is intentionally set to trigger the config error.
+    const PLACEHOLDER_URL = 'https://script.google.com/macros/s/AKfycbw8ta_GdLedTCp1L-I6QKVcJzbJTgy6-3GfBtHMhrCS0ESlXRi5jHVs0v_AFeM6ZICN/exec';
+    const GAS_API_URL = PLACEHOLDER_URL; 
     // --------------------------------------------------------------------------
 
     document.getElementById('btn').addEventListener('click', submit);
@@ -68,17 +71,25 @@
       spin.style.display = on ? 'inline-block' : 'none';
     }
 
-    // --- UPDATED: Using standard fetch API instead of google.script.run ---
+    /** Handles the login attempt using the modern fetch API */
     async function submit(){
       if (btn.disabled) return;
       const u = document.getElementById('u').value.trim();
       const p = document.getElementById('p').value;
+      
       document.getElementById('err').style.display = 'none';
       setLoading(true);
 
-      if (GAS_API_URL.includes('https://script.google.com/macros/s/AKfycbw8ta_GdLedTCp1L-I6QKVcJzbJTgy6-3GfBtHMhrCS0ESlXRi5jHVs0v_AFeM6ZICN/exec')) {
-         fail(new Error("Configuration Error: Please update GAS_API_URL in login.html."));
-         return;
+      if (GAS_API_URL === PLACEHOLDER_URL) {
+          fail(new Error("Configuration Error: Please update GAS_API_URL in login.html."));
+          return;
+      }
+      
+      // Basic client-side validation
+      if (!u || !p) {
+        setLoading(false);
+        showErr("Please enter both username and password.");
+        return;
       }
 
       try {
@@ -86,7 +97,7 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            op: 'login', // This matches the 'op' handled by your Code.gs doPost
+            op: 'login', // Matches the 'op' expected by your Code.gs doPost function
             username: u,
             password: p
           })
@@ -94,29 +105,28 @@
 
         const res = await response.json();
         
-        // Check for good HTTP status and then process the custom 'ok' field from GAS
+        // Use the custom 'ok' field from the GAS JSON response for authentication status
         if (response.ok) {
           handle(res);
         } else {
-          // If HTTP status is bad (e.g., 500)
+          // Fallback error if HTTP status is bad, but the server still returned JSON
           fail(new Error(res.error || `Server error: ${response.status} ${response.statusText}`));
         }
         
       } catch(err) {
-        // This catches true network/CORS issues
+        // Catch network or JSON parsing errors
         fail(err);
       }
     }
-    // -----------------------------------------------------------------------
-
-
+    
     // Logic to handle successful response
     function handle(res){
       if(res && res.ok && res.redirect){
         // 1. Get the session token from the redirect URL returned by Apps Script
         let token = null;
         try {
-          var url = new URL(res.redirect);
+          // Use URL API for robust token extraction
+          const url = new URL(res.redirect);
           token = url.searchParams.get('session');
         } catch(e){
           console.error("URL parsing error:", e);
@@ -126,8 +136,7 @@
           // 2. Persist session token
           localStorage.setItem('session', token);
           
-          // 3. CRITICAL FIX: Redirect to the static site's root page ('/')
-          // The token will be used by index.html to fetch data via the API.
+          // 3. Redirect to the static site's root page ('/') to load the dashboard
           window.location.replace('/'); 
         } else {
           setLoading(false);
@@ -135,10 +144,12 @@
         }
       } else {
         setLoading(false);
-        showErr(res && res.error ? res.error : "Login failed.");
+        // Display the specific error message sent from the Apps Script backend
+        showErr(res && res.error ? res.error : "Login failed. Check username and password.");
       }
     }
 
+    // Logic to handle failed requests (network/CORS/unexpected server error)
     function fail(err){
       setLoading(false);
       showErr(err && err.message ? err.message : "Network error. Please ensure the Apps Script URL is correct and deployed for 'Anyone' access.");
