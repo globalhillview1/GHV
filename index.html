@@ -1,506 +1,2220 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- Favicons -->
-  <link rel="alternate icon" href="/favicon.ico">
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <link rel="manifest" href="/site.webmanifest">
-
   <meta charset="UTF-8" />
-  <title>Global Hillview, Enviro Helpdesk Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <!-- No-paint guard if no token -->
+  <title>Global Hillview – Society Portal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script>
-    (function () {
-      try {
-        const t = localStorage.getItem('token');
-        if (!t) { document.documentElement.style.display='none'; location.replace('/login'); }
-      } catch (e) { document.documentElement.style.display='none'; location.replace('/login'); }
-    })();
+    window.ENV_GAS_URL = "https://script.google.com/macros/s/AKfycbxzoyXJNkqqxNZprAfvAzpsszrkAKXiposW1WjbqHO-4Wu_5fJk7hJ6HCqihF76TKED/exec";
   </script>
-
   <style>
-    :root{
-      --bg:#f7f9fc; --card:#ffffff; --muted:#6b7280; --text:#0f172a;
-      --blue:#0d6efd; --green:#22c55e; --amber:#f59e0b; --violet:#7c3aed; --cyan:#06b6d4; --gray:#374151; --danger:#ef4444;
-      --border:#e5e7eb; --hover:#f1f5f9; --header-h:72px; --controls-h:0px;
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; }
+    
+    .card-hover {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
     }
-    .dark{ --bg:#0b1220; --card:#121a2a; --muted:#9aa4b2; --text:#e5e7eb; --border:#1f2937; --hover:#0f172a; }
-    *{box-sizing:border-box}
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans"; margin:0; color:var(--text); background:var(--bg)}
-    header{position:sticky;top:0;z-index:1000;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 20px;background:var(--bg);border-bottom:1px solid var(--border)}
-    .brand{display:flex;align-items:center;gap:10px}
-    .brand img{height:32px;width:32px;border-radius:6px}
-    header h1{font-size:20px;margin:0;font-weight:700}
-    .toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
-    .switch{display:inline-flex;gap:8px;align-items:center;padding:6px 10px;border:1px solid var(--border);border-radius:10px;background:var(--card)}
-    .btn{appearance:none;border:1px solid var(--border);background:var(--card);color:var(--text);padding:8px 10px;border-radius:10px;cursor:pointer}
-    .btn:hover{background:var(--hover)}
-    .btn.primary{background:var(--blue);color:#fff;border-color:transparent}
-    .btn.danger{background:var(--danger);color:#fff;border-color:transparent}
-    .btn.small{padding:4px 8px;font-size:12px}
-    .sticky-controls{position:sticky;top:var(--header-h);z-index:900;background:var(--bg);padding:8px 20px 12px;box-shadow:0 2px 0 rgba(0,0,0,.04)}
-    .kpis{display:grid;grid-template-columns:repeat(6,minmax(150px,1fr));gap:12px;margin:8px 0 14px}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px}
-    .card .label{font-size:12px;color:var(--muted);text-transform:uppercase}
-    .card .value{font-size:20px;font-weight:800;margin-top:6px}
-    .card.total{border-left:6px solid var(--green)}
-    .card.open{border-left:6px solid var(--gray)}
-    .card.progress{border-left:6px solid var(--amber)}
-    .card.resolved{border-left:6px solid var(--blue)}
-    .card.avgtime{border-left:6px solid var(--cyan)}
-    .card.avgrating{border-left:6px solid var(--violet)}
-    .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-    .tablewrap{margin:12px 20px;height:calc(100vh - var(--header-h) - var(--controls-h) - 24px);overflow:auto;background:var(--card);border:1px solid var(--border);border-radius:16px}
-    table{width:100%;border-collapse:separate;border-spacing:0}
-    thead th{position:sticky;top:0;z-index:1;background:var(--card);border-bottom:1px solid var(--border);font-weight:700;font-size:13px;text-align:left;padding:10px}
-    tbody td{border-top:1px solid var(--border);padding:10px;vertical-align:top;font-size:14px}
-    tr:hover td{background:var(--hover)}
-    .sortable{cursor:pointer}
-    .sortable:after{content:" ⇅";color:var(--muted);font-weight:400;font-size:12px}
-    .badge{display:inline-block;padding:4px 8px;border-radius:999px;font-weight:700;font-size:12px}
-    .Open{background:#111827;color:#fff}
-    .InProgress{background:#f59e0b;color:#111}
-    .Resolved{background:#0d6efd;color:#fff}
-    .media img{width:64px;height:auto;border-radius:8px;cursor:pointer}
-    .media video,.media audio{width:140px;height:auto}
-    .pagination{display:flex;align-items:center;gap:8px;padding:10px}
-    .spacer{flex:1}
-    .muted{color:var(--muted);font-size:12px}
-    #lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;align-items:center;justify-content:center}
-    #lightbox img{max-width:92vw;max-height:92vh;border-radius:12px}
-    .banner{display:none;padding:10px 12px;margin:10px 20px;border-radius:12px;border:1px solid var(--border)}
-    .banner.error{display:block;background:#fee2e2;color:#7f1d1d;border-color:#fecaca}
-    .banner.info{display:block;background:#e0f2fe;color:#0c4a6e;border-color:#bae6fd}
-    .edit{width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:8px; background:var(--card); color:var(--text)}
-    .cell-flex{display:flex; gap:8px; align-items:center}
-    .remark-text{white-space:pre-wrap}
-    .userpill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--border);border-radius:999px;background:var(--card);font-weight:600}
-    .userpill svg{width:16px;height:16px;display:block;flex:0 0 16px}
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .spinner{ width:16px; height:16px; border-radius:50%; border:2px solid currentColor; border-right-color:transparent; display:inline-block; animation:spin .7s linear infinite }
-
-    /* === Layout shift guard === */
-    .placeholder{ visibility:hidden }              /* keeps space, no flash */
-    #adminBtn{ min-width:74px }                    /* reserve predictable width */
-    #userBadge{ width:150px; justify-content:center } /* reserve space for username */
+    .card-hover:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+    
+    .gradient-bg {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .spinner {
+      border: 3px solid #f3f4f6;
+      border-top: 3px solid #3b82f6;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .fade-in {
+      animation: fadeIn 0.3s ease-in;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .nav-item {
+      transition: all 0.2s ease;
+      border-left: 3px solid transparent;
+    }
+    .nav-item:hover {
+      background: rgba(59, 130, 246, 0.05);
+      border-left-color: #3b82f6;
+    }
+    .nav-item.active {
+      background: rgba(59, 130, 246, 0.1);
+      border-left-color: #3b82f6;
+      font-weight: 600;
+    }
+    
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .status-open { background: #fef3c7; color: #92400e; }
+    .status-inprogress { background: #dbeafe; color: #1e40af; }
+    .status-resolved { background: #d1fae5; color: #065f46; }
+    
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      animation: fadeIn 0.2s ease;
+    }
+    
+    .modal-content {
+      background: white;
+      border-radius: 16px;
+      max-width: 800px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    
+    input, textarea, select {
+      transition: all 0.2s ease;
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .filter-btn {
+      transition: all 0.2s ease;
+    }
+    .filter-btn.active {
+      background: #3b82f6;
+      color: white;
+    }
   </style>
 </head>
-<body>
-  <header>
-    <div class="brand">
-      <img src="/android-chrome-512x512.png" alt="Global Hillview logo">
-      <h1>Global Hillview, Enviro Helpdesk Dashboard</h1>
-    </div>
-    <div class="toolbar">
-      <label class="switch"><span>Timezone:</span>
-        <select id="tzSelect"><option value="local">Local</option><option value="utc">UTC</option></select>
-      </label>
-      <label class="switch"><span>Auto-refresh</span><input id="autoRefresh" type="checkbox" checked><span class="muted">60s</span></label>
-      <button id="toggleDark" class="btn">Dark mode</button>
+<body class="bg-gray-50">
+  <div id="root"></div>
 
-      <!-- Nav buttons -->
-      <button class="btn" id="directoryBtn">Directory</button>
-      <button class="btn" id="noticesBtn">Notices</button>
-      <button class="btn" id="docsBtn">Documents</button>
-      <button class="btn" id="financeBtn">Finance</button>
+  <script type="text/babel">
+    const { useEffect, useState, useMemo, useRef } = React;
+    
+    const qs = new URLSearchParams(location.search);
+    const GAS = qs.get('gas') || window.ENV_GAS_URL || '';
+    const INR = new Intl.NumberFormat('en-IN', { style:'currency', currency:'INR', maximumFractionDigits:0 });
 
-      <button class="btn" id="exportCsv">Export CSV</button>
-
-      <!-- Right-end controls: reserved from first paint -->
-      <button class="btn placeholder" id="adminBtn" aria-hidden="true">Admin</button>
-      <span id="userBadge" class="userpill placeholder" aria-hidden="true">👤&nbsp;</span>
-      <button class="btn danger" id="logoutBtn">Logout</button>
-    </div>
-  </header>
-
-  <div id="controls" class="sticky-controls">
-    <section class="kpis">
-      <div class="card total"><div class="label">Total</div><div id="kpiTotal" class="value">0</div></div>
-      <div class="card open"><div class="label">Open</div><div id="kpiOpen" class="value">0</div></div>
-      <div class="card progress"><div class="label">In Progress</div><div id="kpiProgress" class="value">0</div></div>
-      <div class="card resolved"><div class="label">Resolved</div><div id="kpiResolved" class="value">0</div></div>
-      <div class="card avgtime"><div class="label">Avg Resolution</div><div id="kpiAvgTime" class="value">0m</div></div>
-      <div class="card avgrating"><div class="label">Avg Rating</div><div id="kpiAvgRating" class="value">0</div></div>
-    </section>
-    <section class="filters">
-      <select id="towerFilter"><option value="">All Towers</option></select>
-      <select id="statusFilter"><option value="">All Status</option><option value="Open">Open</option><option value="InProgress">In Progress</option><option value="Resolved">Resolved</option></select>
-      <input type="date" id="fromDate"><input type="date" id="toDate">
-      <input type="text" id="search" placeholder="Search (ID, flat, issue, remark, user...)" style="min-width:260px">
-      <label class="switch"><span>Rows</span><input id="pageSize" type="number" value="10" min="5" max="100" style="width:80px"></label>
-      <button id="applyBtn" class="btn primary">Apply</button><button id="resetBtn" class="btn">Reset</button>
-    </section>
-  </div>
-
-  <div id="netError" class="banner error" style="display:none">Network error while fetching data.</div>
-  <div id="infoMsg" class="banner info" style="display:none">Showing cached data.</div>
-
-  <div class="tablewrap">
-    <table id="grid">
-      <thead>
-        <tr>
-          <th class="sortable" data-key="Tracking ID">Tracking ID</th>
-          <th class="sortable" data-key="Date and Time Raised">Date & Time Raised</th>
-          <th class="sortable" data-key="Tower">Tower</th>
-          <th class="sortable" data-key="Flat">Flat</th>
-          <th class="sortable" data-key="Issue">Issue</th>
-          <th class="sortable" data-key="Description">Description</th>
-          <th>Media</th>
-          <th class="sortable" data-key="Status">Status</th>
-          <th class="sortable" data-key="Redressal Remark">Redressal Remark</th>
-          <th class="sortable" data-key="User ID">User ID</th>
-          <th class="sortable" data-key="Date and Time Resolved">Date & Time Resolved</th>
-          <th class="sortable" data-key="__computed_time">Time Taken</th>
-          <th class="sortable" data-key="Feedback Rating">Feedback</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-    <div class="pagination">
-      <button class="btn" id="prevPage">Prev</button><span id="pageInfo" class="muted">Page 1 / 1</span><button class="btn" id="nextPage">Next</button>
-      <div class="spacer"></div><span id="rowCount" class="muted"></span>
-    </div>
-  </div>
-
-  <div id="lightbox" onclick="this.style.display='none'"><img id="lightbox-img" src="" alt="preview"></div>
-
-  <script>
-    const API = "/api";
-    const esc = function(s){ return String(s).replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); };
-    function userIcon(){ return '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true" style="width:16px;height:16px;stroke:currentColor;display:block"><circle cx="12" cy="7.5" r="4" stroke-width="1.6"></circle><path d="M4.5 19.5a7.5 7.5 0 0115 0" stroke-width="1.6" stroke-linecap="round"></path></svg>'; }
-
-    const getTok = function(){ try{ return localStorage.getItem('token'); }catch(e){ return null; } };
-    let heartbeatTimer = null;
-    const HEARTBEAT_MS = 5000;
-
-    const logoutNow = () => {
-      const btn = document.getElementById('logoutBtn');
-      if (btn && !btn.dataset.loading){
-        btn.dataset.loading = '1';
-        btn.disabled = true;
-        btn.style.minWidth = btn.offsetWidth + 'px';
-        btn.innerHTML = '<span class="spinner" aria-hidden="true"></span> Logging out…';
-      }
+    async function fetchWithTimeout(url, opts={}, ms=12000){
+      const ctl = new AbortController();
+      const id = setTimeout(() => ctl.abort(), ms);
       try {
-        if (heartbeatTimer) clearInterval(heartbeatTimer);
-        if (typeof state !== 'undefined' && state && state.timer) clearInterval(state.timer);
-        localStorage.removeItem('token'); localStorage.removeItem('role'); localStorage.removeItem('username');
-      } catch (e) {}
-      setTimeout(function(){ location.replace('/login'); }, 600);
+        return await fetch(url, {...opts, signal: ctl.signal});
+      } finally {
+        clearTimeout(id);
+      }
+    }
+
+    async function getJSON(action, extra={}){
+      const u = new URL(GAS);
+      if(!GAS) throw new Error('Backend not configured');
+      u.searchParams.set('action', action);
+      for(const [k,v] of Object.entries(extra)) u.searchParams.set(k, v);
+      const r = await fetchWithTimeout(u, {cache:'no-store'});
+      if(!r.ok) throw new Error(await r.text().catch(() => r.statusText));
+      return r.json();
+    }
+
+    async function postPlain(body){
+      if(!GAS) throw new Error('Backend not configured');
+      const r = await fetchWithTimeout(GAS, {
+        method: 'POST',
+        headers: {'Content-Type': 'text/plain;charset=utf-8'},
+        body: JSON.stringify(body)
+      });
+      if(!r.ok) throw new Error(await r.text().catch(() => r.statusText));
+      return r.json();
+    }
+
+    const api = {
+      async login(u, p) {
+        try {
+          return await postPlain({op:'login', username:u, password:p});
+        } catch {
+          return getJSON('login', {u, p});
+        }
+      },
+      async sessionInfo(token) {
+        return postPlain({op:'sessionInfo', token});
+      },
+      list: {
+        Directory: () => getJSON('listDirectory'),
+        Notices: () => getJSON('listNotices'),
+        Issues: () => getJSON('listIssues'),
+        Transactions: () => getJSON('listTransactions'),
+        Documents: () => getJSON('listDocuments'),
+        Voters: () => getJSON('listVoters'),
+        OpeningBalances: () => getJSON('listOpeningBalances').catch(() => ({rows:[]})),
+        ChartOfAccounts: () => getJSON('listChartOfAccounts').catch(() => ({rows:[]})),
+      },
+      async upsertRow(sheet, key, row) {
+        return postPlain({op:'upsertRow', sheet, key, row});
+      },
+      async createRow(sheet, row) {
+        return postPlain({op:'createRow', sheet, row});
+      }
     };
 
-    async function verifySession(){
-      const t = getTok(); if(!t){ logoutNow(); throw new Error('no token'); }
-      const r = await fetch(API + '?action=whoami&token=' + encodeURIComponent(t), {cache:'no-store'});
-      const j = await r.json().catch(function(){ return {}; });
-      if(!j.ok || !j.data || !j.data.user){ logoutNow(); throw new Error('unauthorized'); }
-      try{ localStorage.setItem('role', j.data.user.role); localStorage.setItem('username', j.data.user.username); }catch(e){}
-      state.isAdmin = (j.data.user.role === 'admin');
-
-      // Reveal pre-reserved controls without reflow
-      const adminBtn = document.getElementById('adminBtn');
-      const userBadge = document.getElementById('userBadge');
-
-      if (state.isAdmin) {
-        adminBtn.classList.remove('placeholder');
-        adminBtn.removeAttribute('aria-hidden');
-      } else {
-        // keep placeholder if you want identical width even for non-admins:
-        // adminBtn.classList.add('placeholder');
-      }
-
-      userBadge.innerHTML = userIcon()+'<span>'+esc(j.data.user.username||'')+'</span>';
-      userBadge.classList.remove('placeholder');
-      userBadge.removeAttribute('aria-hidden');
+    function showToast(message, type='info') {
+      const toastContainer = document.getElementById('toast-container') || (() => {
+        const div = document.createElement('div');
+        div.id = 'toast-container';
+        div.className = 'fixed top-4 right-4 z-50 flex flex-col gap-2';
+        document.body.appendChild(div);
+        return div;
+      })();
+      
+      const toast = document.createElement('div');
+      const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
+      toast.className = `${bgColor} text-white px-6 py-3 rounded-lg shadow-lg fade-in`;
+      toast.textContent = message;
+      toastContainer.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
     }
 
-    async function heartbeatOnce(){ try{ await verifySession(); }catch(e){} }
-    function startHeartbeat(){
-      if (heartbeatTimer) clearInterval(heartbeatTimer);
-      heartbeatTimer = setInterval(heartbeatOnce, HEARTBEAT_MS);
-      window.addEventListener('focus', heartbeatOnce, { passive:true });
-      document.addEventListener('visibilitychange', function(){ if(!document.hidden) heartbeatOnce(); }, { passive:true });
-    }
+    function LoginScreen({ onSuccess }) {
+      const [username, setUsername] = useState('');
+      const [password, setPassword] = useState('');
+      const [error, setError] = useState('');
+      const [loading, setLoading] = useState(false);
 
-    const state = { all:[], filtered:[], sort:{key:"Date and Time Raised",dir:"desc"},
-      page:1, pageSize:10, tz:"local", timer:null, lastFetchOk:true, isAdmin:false, editing:{} };
-
-    function parseDateSafe(s){ if(!s) return null; if(s instanceof Date) return s; if(typeof s==="number") return new Date(s); var d=new Date(String(s).includes("T")?s:String(s).replace(" ","T")); return isNaN(d)?null:d; }
-    function fmtDate(d,tzMode){ if(!d) return ""; var o={year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false,timeZone:tzMode==="utc"?"UTC":undefined}; var s=new Intl.DateTimeFormat(undefined,o).format(d); return tzMode==="utc"?s+" UTC":s; }
-    function endOfDay(d){ var x=new Date(d); x.setHours(23,59,59,999); return x; }
-    function msToHuman(ms){ if(ms==null||isNaN(ms)) return ""; var m=Math.floor(ms/60000); if(m<60) return m+"m"; var h=Math.floor(m/60),rem=m%60; if(h<24) return h+"h "+rem+"m"; var days=Math.floor(h/24),rh=h%24; return days+"d "+rh+"h "+rem+"m"; }
-    function renderMediaCell(url){ if(!url) return "<span class='muted'>No media</span>"; var q=function(s){return String(s).replace(/"/g,"&quot;")}; if(/\.(jpe?g|png|gif|webp)$/i.test(url)) return '<div class="media"><img src="'+q(url)+'" alt="media" onclick="openLightbox(\''+q(url)+'\')"></div>'; if(/\.(mp4|webm|mov)$/i.test(url)) return '<div class="media"><video controls><source src="'+q(url)+'"></video></div>'; if(/\.(mp3|wav|m4a)$/i.test(url)) return '<div class="media"><audio controls src="'+q(url)+'"></audio></div>'; return '<a href="'+q(url)+'" target="_blank" rel="noopener">Open</a>'; }
-    function openLightbox(url){ document.getElementById("lightbox-img").src=url; document.getElementById("lightbox").style.display="flex"; }
-    function setStickyHeights(){ var h=document.querySelector('header'); var c=document.getElementById('controls'); if(h) document.documentElement.style.setProperty('--header-h',h.offsetHeight+'px'); if(c) document.documentElement.style.setProperty('--controls-h',c.offsetHeight+'px'); }
-    window.addEventListener('resize', setStickyHeights);
-
-    async function fetchData(){
-      try{
-        const t = getTok();
-        const r = await fetch(API + '?action=issues&token=' + encodeURIComponent(t), { cache:"no-store" });
-        const j = await r.json();
-        if(!j.ok) throw new Error(j.error || 'Unauthorized');
-        const data = j.data || [];
-        state.lastFetchOk = true;
-        document.getElementById("netError").style.display = "none";
-        document.getElementById("infoMsg").style.display = "none";
-        state.all = normalizeRows(data);
-        populateTowerFilter(state.all);
-        applyFilters();
-        setStickyHeights();
-      }catch(err){
-        if((err.message||'').toLowerCase().includes('unauthorized')){ logoutNow(); return; }
-        state.lastFetchOk = false;
-        document.getElementById("netError").style.display = "block";
-        if(state.all.length){ document.getElementById("infoMsg").style.display = "block"; render(); }
-      }
-    }
-    function normalizeRows(rows){
-      return rows.map(function(r){
-        const raised = parseDateSafe(r["Date and Time Raised"]);
-        const resolved = parseDateSafe(r["Date and Time Resolved"]);
-        var ms = null;
-        if(raised && resolved) ms = Math.max(0, resolved - raised);
-        if(ms==null && r["Time Taken"]){
-          const m = String(r["Time Taken"]).match(/(\d+)\s*m/);
-          if(m) ms = parseInt(m[1],10)*60000;
+      async function handleLogin(e) {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+        
+        try {
+          const r = await api.login(username, password);
+          if (r?.ok && r?.token) {
+            localStorage.setItem('session', r.token);
+            onSuccess({
+              token: r.token,
+              role: (r.role || 'user').toLowerCase(),
+              username: r.username || username
+            });
+            showToast('Welcome back!', 'success');
+          } else {
+            setError(r?.error || 'Invalid credentials');
+          }
+        } catch (e) {
+          setError(String(e));
+        } finally {
+          setLoading(false);
         }
-        return { }.constructor.assign({}, r, { __raised: raised, __resolved: resolved, __computed_time: ms });
-      });
-    }
-    function populateTowerFilter(data){
-      const sel = document.getElementById("towerFilter");
-      const existing = new Set(Array.prototype.slice.call(sel.options).map(function(o){return o.value;}));
-      Array.from(new Set(data.map(function(d){return d.Tower;}).filter(Boolean))).sort().forEach(function(v){
-        if(!existing.has(v)){ const o=document.createElement("option"); o.value=v; o.textContent=v; sel.appendChild(o); }
-      });
-    }
-    function applyFilters(){
-      const tower = document.getElementById("towerFilter").value;
-      const status = document.getElementById("statusFilter").value;
-      const from = document.getElementById("fromDate").value ? new Date(document.getElementById("fromDate").value) : null;
-      const to = document.getElementById("toDate").value ? endOfDay(document.getElementById("toDate").value) : null;
-      const q = document.getElementById("search").value.trim().toLowerCase();
+      }
 
-      state.filtered = state.all.filter(function(r){
-        if(tower && r.Tower !== tower) return false;
-        if(status && r.Status !== status) return false;
-        if(from && r.__raised && r.__raised < from) return false;
-        if(to && r.__raised && r.__raised > to) return false;
-        if(q){
-          const blob = [r["Tracking ID"], r["Tower"], r["Flat"], r["Issue"], r["Description"], r["Redressal Remark"], r["Status"], r["User ID"], r["Feedback Rating"]]
-            .map(function(x){return String(x||"").toLowerCase();}).join(" ");
-          if(!blob.includes(q)) return false;
+      return (
+        <div className="min-h-screen gradient-bg flex items-center justify-center p-4">
+          <div className="w-full max-w-md">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 fade-in">
+              <div className="text-center mb-8">
+                <div className="w-16 h-16 bg-blue-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                  </svg>
+                </div>
+                <h1 className="text-2xl font-bold text-gray-900">Global Hillview</h1>
+                <p className="text-gray-600 mt-2">Society Management Portal</p>
+          
+              </div>
+
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={e => setUsername(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                    placeholder="Enter your username"
+                    required
+                    autoFocus
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                    placeholder="Enter your password"
+                    required
+                  />
+                </div>
+
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {loading && <div className="spinner" />}
+                  {loading ? 'Signing in...' : 'Sign In'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setUsername('demo'); setPassword('demo'); }}
+                  className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 rounded-lg transition-colors"
+                >
+                  Use Demo Account
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function Dashboard({ data, onNavigate, isAdmin }) {
+      const stats = useMemo(() => {
+        const openIssues = data.Issues.filter(i => (i.Status || '').toLowerCase() !== 'resolved').length;
+        const totalEnviroStaff = data.Directory.length;
+        const collected = data.Transactions
+          .filter(t => (t.Type || '').toLowerCase() === 'credit')
+          .reduce((sum, t) => sum + Number(t.Amount || 0), 0);
+        const expenses = data.Transactions
+          // NEW (correct)
+.filter(t => {
+const type = (t.Type || '').toLowerCase().trim();
+return type === 'debit' || type === 'expense';
+})
+          .reduce((sum, t) => sum + Number(t.Amount || 0), 0);
+        
+        return { openIssues, totalEnviroStaff, collected, expenses };
+      }, [data]);
+
+      return (
+        <div className="space-y-6 fade-in">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div 
+              onClick={() => onNavigate('Directory')}
+              className="bg-white rounded-2xl p-6 shadow-sm card-hover"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-600 text-sm font-medium">Total Enviro Staff</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-2">{stats.totalEnviroStaff}</p>
+                </div>
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <div 
+              onClick={() => onNavigate('Issues')}
+              className="bg-white rounded-2xl p-6 shadow-sm card-hover"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-600 text-sm font-medium">Open Issues</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-2">{stats.openIssues}</p>
+                </div>
+                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {isAdmin && (
+              <>
+                <div 
+                  onClick={() => onNavigate('Transactions')}
+                  className="bg-white rounded-2xl p-6 shadow-sm card-hover"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-600 text-sm font-medium">Collected</p>
+                      <p className="text-3xl font-bold text-green-600 mt-2">{INR.format(stats.collected)}</p>
+                    </div>
+                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                      <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div 
+                  onClick={() => onNavigate('Transactions')}
+                  className="bg-white rounded-2xl p-6 shadow-sm card-hover"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-600 text-sm font-medium">Expenses</p>
+                      <p className="text-3xl font-bold text-red-600 mt-2">{INR.format(stats.expenses)}</p>
+                    </div>
+                    <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                      <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white rounded-2xl shadow-sm p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Recent Notices</h3>
+                <button
+                  onClick={() => onNavigate('Notices')}
+                  className="text-sm text-blue-500 hover:text-blue-600 font-medium"
+                >
+                  View All →
+                </button>
+              </div>
+              <div className="space-y-3">
+                {data.Notices.slice(0, 5).map((notice, i) => (
+                  <div 
+                    key={i} 
+                    onClick={() => onNavigate('Notices')}
+                    className="flex items-start gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{notice.Subject}</p>
+                      <p className="text-xs text-gray-500 mt-1">{notice.Date}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Recent Issues</h3>
+                <button
+                  onClick={() => onNavigate('Issues')}
+                  className="text-sm text-blue-500 hover:text-blue-600 font-medium"
+                >
+                  View All →
+                </button>
+              </div>
+              <div className="space-y-3">
+                {data.Issues.slice(0, 5).map((issue, i) => (
+                  <div 
+                    key={i} 
+                    onClick={() => onNavigate('Issues')}
+                    className="flex items-start gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{issue.Title || issue.Description}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className={`status-badge status-${(issue.Status || 'open').toLowerCase().replace(' ', '')}`}>
+                          {issue.Status || 'Open'}
+                        </span>
+                        <span className="text-xs text-gray-500">{issue['Tracking ID']}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Directory Page with Upload to Drive
+    function DirectoryPage({ data, isAdmin, onRefresh }) {
+      const [search, setSearch] = useState('');
+      const [activeFilter, setActiveFilter] = useState('all');
+      const [showAddModal, setShowAddModal] = useState(false);
+      const [editRow, setEditRow] = useState(null);
+      const [uploading, setUploading] = useState(false);
+
+      const filtered = useMemo(() => {
+        let result = data;
+        
+        if (activeFilter === 'active') {
+          result = result.filter(r => (r.Active || '').toLowerCase() === 'yes');
+        } else if (activeFilter === 'inactive') {
+          result = result.filter(r => (r.Active || '').toLowerCase() === 'no' || (r.Active || '').toLowerCase() === 'non-active');
         }
-        return true;
-      });
-      state.page = 1;
-      render();
-    }
-    function resetFilters(){
-      document.getElementById("towerFilter").value = "";
-      document.getElementById("statusFilter").value = "";
-      document.getElementById("fromDate").value = "";
-      document.getElementById("toDate").value = "";
-      document.getElementById("search").value = "";
-      state.page = 1;
-      state.filtered = state.all.slice();
-      render();
-    }
+        
+        if (search.trim()) {
+          const q = search.toLowerCase();
+          result = result.filter(r => 
+            Object.values(r).some(v => String(v).toLowerCase().includes(q))
+          );
+        }
+        
+        return result;
+      }, [data, search, activeFilter]);
 
-    const svgPencil = '<svg class="icon" viewBox="0 0 24 24" width="18" height="18"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm3.92 2.33H5v-1.92l8.06-8.06 1.92 1.92L6.92 19.58zM20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/></svg>';
-    const svgFloppy = '<svg class="icon" viewBox="0 0 24 24" width="18" height="18"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4Zm-3 16H6v-6h8v6Zm2-12H6V5h10v2Z"/></svg>';
-
-    function rowEditorCells(r){
-      const id = String(r["Tracking ID"]||"");
-      const st = String(r["Status"]||"");
-      const remark = r["Redressal Remark"] || "";
-      if (!state.isAdmin) {
-        return { status:'<span class="badge '+st+'">'+esc(st)+'</span>', remark:'<div class="remark-text">'+esc(remark)+'</div>' };
-      }
-      const editing = !!state.editing[id];
-      if (!editing) {
-        return {
-          status:'<span class="badge '+st+'">'+esc(st)+'</span>',
-          remark:'<div class="cell-flex"><div class="remark-text">'+esc(remark)+'</div><button class="btn small" title="Edit" onclick="enterEdit(\''+id+'\')">'+svgPencil+'</button></div>'
-        };
-      } else {
-        const rem = esc(remark).replace(/"/g,'&quot;');
-        return {
-          status:'<select class="edit" id="st-'+id+'" onkeydown="if(event.key===\'Enter\'){event.preventDefault(); saveRow(\''+id+'\')}">'+
-              '<option value="Open" '+(st==="Open"?"selected":"")+'>Open</option>'+
-              '<option value="InProgress" '+(st==="InProgress"?"selected":"")+'>In Progress</option>'+
-              '<option value="Resolved" '+(st==="Resolved"?"selected":"")+'>Resolved</option>'+
-            '</select>',
-          remark:'<div class="cell-flex">'+
-              '<input class="edit" id="rm-'+id+'" value="'+rem+'" placeholder="Enter remark" onkeydown="if(event.key===\'Enter\'){event.preventDefault(); saveRow(\''+id+'\')}">'+
-              '<button class="btn small" title="Save" onclick="saveRow(\''+id+'\')">'+svgFloppy+'</button>'+
-            '</div>'
-        };
-      }
-    }
-    function enterEdit(id){ if(!state.isAdmin) return; state.editing[id]=true; render(); }
-    window.enterEdit = enterEdit;
-
-    async function saveRow(id){
-      if(!state.isAdmin) return;
-      const stEl = document.getElementById('st-'+id);
-      const rmEl = document.getElementById('rm-'+id);
-      if(!stEl || !rmEl) return;
-      const status = stEl.value;
-      const remark = rmEl.value;
-      try{
-        const res = await fetch(API + '?action=updateissue&token=' + encodeURIComponent(getTok()), {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ trackingId:id, status:status, remark:remark })
+      const deptStats = useMemo(() => {
+        const stats = {};
+        data.forEach(r => {
+          const dept = r.Department || r.Designation || 'Other';
+          if (!stats[dept]) stats[dept] = 0;
+          if ((r.Active || '').toLowerCase() === 'yes') stats[dept]++;
         });
-        const out = await res.json().catch(function(){ return {}; });
-        if(!out.ok){
-          if((out.error||'').toLowerCase().includes('unauthorized')) { logoutNow(); return; }
-          throw new Error(out.error || 'Save failed');
+        return Object.entries(stats).sort((a, b) => b[1] - a[1]);
+      }, [data]);
+
+      return (
+        <div className="space-y-6 fade-in">
+          <div className="bg-white rounded-2xl shadow-sm p-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={() => setActiveFilter('all')}
+                className={`filter-btn px-4 py-2 rounded-lg font-medium ${activeFilter === 'all' ? 'active' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              >
+                All ({data.length})
+              </button>
+              <button
+                onClick={() => setActiveFilter('active')}
+                className={`filter-btn px-4 py-2 rounded-lg font-medium ${activeFilter === 'active' ? 'active' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              >
+                Active
+              </button>
+              <button
+                onClick={() => setActiveFilter('inactive')}
+                className={`filter-btn px-4 py-2 rounded-lg font-medium ${activeFilter === 'inactive' ? 'active' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              >
+                Non-Active
+              </button>
+            </div>
+          </div>
+
+          {deptStats.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {deptStats.map(([dept, count]) => (
+                <div key={dept} className="bg-white rounded-xl p-4 shadow-sm">
+                  <p className="text-xs text-gray-600 truncate" title={dept}>{dept}</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{count}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="bg-white rounded-2xl shadow-sm">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <h2 className="text-xl font-semibold text-gray-900">Directory ({filtered.length})</h2>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Search..."
+                    className="px-4 py-2 border border-gray-300 rounded-lg"
+                  />
+                  {isAdmin && (
+                    <button
+                      onClick={() => setShowAddModal(true)}
+                      className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center gap-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Photo</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Gender</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Shift</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Joined On</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Manager</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Active</th>
+                    {isAdmin && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filtered.map((row, i) => (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        {row.Photo ? (
+                          <img src={row.Photo} alt="Photo" className="w-10 h-10 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-xs">
+                            {(row.Name || row['Employee Name'] || 'N')[0]}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm">{row.Name || row['Employee Name']}</td>
+                      <td className="px-4 py-3 text-sm">{row.Department || row.Designation}</td>
+                      <td className="px-4 py-3 text-sm">{row.Gender}</td>
+                      <td className="px-4 py-3 text-sm">{row.Shift}</td>
+                      <td className="px-4 py-3 text-sm">{row['Joined On']}</td>
+                      <td className="px-4 py-3 text-sm">{row.Manager}</td>
+                      <td className="px-4 py-3">
+                        <span className={`status-badge ${(row.Active || '').toLowerCase() === 'yes' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
+                          {row.Active || 'No'}
+                        </span>
+                      </td>
+                      {isAdmin && (
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => setEditRow(row)}
+                            className="text-blue-500 hover:text-blue-600 text-sm font-medium"
+                          >
+                            Edit
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {(showAddModal || editRow) && (
+            <DirectoryModal
+              row={editRow}
+              uploading={uploading}
+              onClose={() => { setShowAddModal(false); setEditRow(null); }}
+              onSave={async (data) => {
+                try {
+                  setUploading(true);
+                  
+                  // Handle photo upload to Drive if it's a base64 string
+                  if (data.Photo && data.Photo.startsWith('data:')) {
+                    const fileName = `photo_${Date.now()}.${data.Photo.split(';')[0].split('/')[1]}`;
+                    const uploadRes = await fetch(GAS, {
+                      method: 'POST',
+                      headers: {'Content-Type': 'text/plain;charset=utf-8'},
+                      body: JSON.stringify({
+                        op: 'uploadFile',
+                        sheet: 'Directory',
+                        fileData: data.Photo,
+                        fileName: fileName
+                      })
+                    });
+                    const uploadData = await uploadRes.json();
+                    if (uploadData.ok && uploadData.url) {
+                      data.Photo = uploadData.url;
+                    }
+                  }
+                  
+                  if (editRow) {
+                    await api.upsertRow('Directory', 'Serial', { ...editRow, ...data });
+                  } else {
+                    await api.createRow('Directory', data);
+                  }
+                  await onRefresh();
+                  setShowAddModal(false);
+                  setEditRow(null);
+                  showToast('Saved successfully', 'success');
+                } catch (e) {
+                  showToast('Failed: ' + String(e), 'error');
+                } finally {
+                  setUploading(false);
+                }
+              }}
+            />
+          )}
+        </div>
+      );
+    }
+
+    function DirectoryModal({ row, uploading, onClose, onSave }) {
+      const [formData, setFormData] = useState(row || {
+        Name: '', Department: '', Gender: '', Shift: '', 'Joined On': '', Manager: '', Active: 'Yes', Photo: ''
+      });
+
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold">{row ? 'Edit' : 'Add'} Employee</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                  <input
+                    type="text"
+                    value={formData.Name || formData['Employee Name'] || ''}
+                    onChange={e => setFormData({...formData, Name: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
+                  <input
+                    type="text"
+                    value={formData.Department || formData.Designation || ''}
+                    onChange={e => setFormData({...formData, Department: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                  <select
+                    value={formData.Gender || ''}
+                    onChange={e => setFormData({...formData, Gender: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  >
+                    <option value="">Select</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Shift</label>
+                  <select
+                    value={formData.Shift || ''}
+                    onChange={e => setFormData({...formData, Shift: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  >
+                    <option value="">Select</option>
+                    <option value="Day">Day</option>
+                    <option value="Night">Night</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Joined On</label>
+                  <input
+                    type="date"
+                    value={formData['Joined On'] || ''}
+                    onChange={e => setFormData({...formData, 'Joined On': e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Manager</label>
+                  <input
+                    type="text"
+                    value={formData.Manager || ''}
+                    onChange={e => setFormData({...formData, Manager: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                {row && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Resigned On</label>
+                    <input
+                      type="date"
+                      value={formData['Resigned On'] || ''}
+                      onChange={e => setFormData({...formData, 'Resigned On': e.target.value})}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    />
+                  </div>
+                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Active</label>
+                  <select
+                    value={formData.Active || 'Yes'}
+                    onChange={e => setFormData({...formData, Active: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  >
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Photo</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={e => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = () => setFormData({...formData, Photo: reader.result});
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  />
+                  {formData.Photo && (
+                    <img src={formData.Photo} alt="Preview" className="mt-2 w-20 h-20 rounded-lg object-cover" />
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                onClick={onClose}
+                disabled={uploading}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => onSave(formData)}
+                disabled={uploading}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
+              >
+                {uploading && <div className="spinner" style={{width: '16px', height: '16px', borderWidth: '2px'}} />}
+                {uploading ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Notices Page with View/Edit
+    function NoticesPage({ data, isAdmin, onRefresh }) {
+      const [search, setSearch] = useState('');
+      const [showAddModal, setShowAddModal] = useState(false);
+      const [viewRow, setViewRow] = useState(null);
+      const [editRow, setEditRow] = useState(null);
+      const [uploading, setUploading] = useState(false);
+
+      const filtered = useMemo(() => {
+        if (!search.trim()) return data;
+        const q = search.toLowerCase();
+        return data.filter(r => 
+          Object.values(r).some(v => String(v).toLowerCase().includes(q))
+        );
+      }, [data, search]);
+
+      return (
+        <div className="space-y-6 fade-in">
+          <div className="bg-white rounded-2xl shadow-sm">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <h2 className="text-xl font-semibold text-gray-900">Notices ({filtered.length})</h2>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Search..."
+                    className="px-4 py-2 border border-gray-300 rounded-lg"
+                  />
+                  {isAdmin && (
+                    <button
+                      onClick={() => setShowAddModal(true)}
+                      className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center gap-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subject</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filtered.map((row, i) => (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-sm">{row.Date}</td>
+                      <td className="px-4 py-3 text-sm font-medium">{row.Subject}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="line-clamp-2">{row.Description}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setViewRow(row)}
+                            className="text-blue-500 hover:text-blue-600 text-sm font-medium"
+                          >
+                            View
+                          </button>
+                          {isAdmin && (
+                            <button
+                              onClick={() => setEditRow(row)}
+                              className="text-green-500 hover:text-green-600 text-sm font-medium"
+                            >
+                              Edit
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {viewRow && <NoticeViewModal row={viewRow} onClose={() => setViewRow(null)} />}
+          
+          {(showAddModal || editRow) && (
+            <NoticeModal
+              row={editRow}
+              uploading={uploading}
+              onClose={() => { setShowAddModal(false); setEditRow(null); }}
+              onSave={async (data) => {
+                try {
+                  setUploading(true);
+                  
+                  // Handle file upload to Drive if it's a base64 string
+                  if (data.Media && data.Media.startsWith('data:')) {
+                    const fileName = `notice_${Date.now()}.${data.Media.split(';')[0].split('/')[1]}`;
+                    const uploadRes = await fetch(GAS, {
+                      method: 'POST',
+                      headers: {'Content-Type': 'text/plain;charset=utf-8'},
+                      body: JSON.stringify({
+                        op: 'uploadFile',
+                        sheet: 'Notices',
+                        fileData: data.Media,
+                        fileName: fileName
+                      })
+                    });
+                    const uploadData = await uploadRes.json();
+                    if (uploadData.ok && uploadData.url) {
+                      data.Media = uploadData.url;
+                    }
+                  }
+                  
+                  if (editRow) {
+                    await api.upsertRow('Notices', 'Serial Number', { ...editRow, ...data });
+                  } else {
+                    await api.createRow('Notices', data);
+                  }
+                  await onRefresh();
+                  setShowAddModal(false);
+                  setEditRow(null);
+                  showToast('Notice saved', 'success');
+                } catch (e) {
+                  showToast('Failed: ' + String(e), 'error');
+                } finally {
+                  setUploading(false);
+                }
+              }}
+            />
+          )}
+        </div>
+      );
+    }
+
+    function NoticeViewModal({ row, onClose }) {
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold">Notice Details</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                <p className="text-gray-900">{row.Date}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                <p className="text-gray-900 font-medium">{row.Subject}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <p className="text-gray-900 whitespace-pre-wrap">{row.Description}</p>
+              </div>
+              {row.Media && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Attachment</label>
+                  {row.Media.match(/\.(jpg|jpeg|png|gif)$/i) ? (
+                    <img src={row.Media} alt="Notice" className="max-w-full h-auto rounded-lg" />
+                  ) : (
+
+                    <a
+                      href={row.Media}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:text-blue-600 flex items-center gap-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      View Attachment
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="p-6 border-t border-gray-200 flex justify-end">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function NoticeModal({ row, uploading, onClose, onSave }) {
+      const [formData, setFormData] = useState(row || {
+        Date: new Date().toISOString().split('T')[0],
+        Subject: '',
+        Description: '',
+        Media: ''
+      });
+
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold">{row ? 'Edit' : 'Add'} Notice</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                <input
+                  type="date"
+                  value={formData.Date}
+                  onChange={e => setFormData({...formData, Date: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
+                <input
+                  type="text"
+                  value={formData.Subject}
+                  onChange={e => setFormData({...formData, Subject: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <textarea
+                  value={formData.Description}
+                  onChange={e => setFormData({...formData, Description: e.target.value})}
+                  rows="4"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Attach File</label>
+                <input
+                  type="file"
+                  onChange={e => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = () => setFormData({...formData, Media: reader.result});
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                onClick={onClose}
+                disabled={uploading}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => onSave(formData)}
+                disabled={uploading}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
+              >
+                {uploading && <div className="spinner" style={{width: '16px', height: '16px', borderWidth: '2px'}} />}
+                {uploading ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Issues Page with View
+    function IssuesPage({ data, isAdmin, onRefresh }) {
+      const [search, setSearch] = useState('');
+      const [editRow, setEditRow] = useState(null);
+      const [viewRow, setViewRow] = useState(null);
+
+      const stats = useMemo(() => {
+        const open = data.filter(i => (i.Status || 'Open').toLowerCase() === 'open').length;
+        const inProgress = data.filter(i => (i.Status || '').toLowerCase() === 'inprogress').length;
+        const resolved = data.filter(i => (i.Status || '').toLowerCase() === 'resolved').length;
+        
+        const ratings = data.filter(i => i['Feedback Rating']).map(i => Number(i['Feedback Rating']) || 0);
+        const avgRating = ratings.length ? (ratings.reduce((a,b) => a+b, 0) / ratings.length).toFixed(1) : 0;
+        
+        return { open, inProgress, resolved, avgRating, total: data.length };
+      }, [data]);
+
+      const filtered = useMemo(() => {
+        if (!search.trim()) return data;
+        const q = search.toLowerCase();
+        return data.filter(r => 
+          Object.values(r).some(v => String(v).toLowerCase().includes(q))
+        );
+      }, [data, search]);
+
+      return (
+        <div className="space-y-6 fade-in">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-white rounded-xl p-4 shadow-sm">
+              <p className="text-xs text-gray-600">Open</p>
+              <p className="text-2xl font-bold text-orange-600 mt-1">{stats.open}</p>
+            </div>
+            <div className="bg-white rounded-xl p-4 shadow-sm">
+              <p className="text-xs text-gray-600">In Progress</p>
+              <p className="text-2xl font-bold text-blue-600 mt-1">{stats.inProgress}</p>
+            </div>
+            <div className="bg-white rounded-xl p-4 shadow-sm">
+              <p className="text-xs text-gray-600">Resolved</p>
+              <p className="text-2xl font-bold text-green-600 mt-1">{stats.resolved}</p>
+            </div>
+            <div className="bg-white rounded-xl p-4 shadow-sm">
+              <p className="text-xs text-gray-600">Avg. Rating</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{stats.avgRating} ⭐</p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-gray-900">Issues ({filtered.length})</h2>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search..."
+                  className="px-4 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tracking ID</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Redressal Remark</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filtered.map((row, i) => (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-sm">{row['Tracking ID']}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="line-clamp-1">{row.Title || row.Description}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`status-badge status-${(row.Status || 'open').toLowerCase().replace(' ', '')}`}>
+                          {row.Status || 'Open'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="line-clamp-1">{row['Redressal Remark']}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setViewRow(row)}
+                            className="text-blue-500 hover:text-blue-600 text-sm font-medium"
+                          >
+                            View
+                          </button>
+                          {isAdmin && (
+                            <button
+                              onClick={() => setEditRow(row)}
+                              className="text-green-500 hover:text-green-600 text-sm font-medium"
+                            >
+                              Edit
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {viewRow && <IssueViewModal row={viewRow} onClose={() => setViewRow(null)} />}
+          
+          {editRow && (
+            <IssueModal
+              row={editRow}
+              onClose={() => setEditRow(null)}
+              onSave={async (data) => {
+                try {
+                  await api.upsertRow('Issues', 'Tracking ID', { ...editRow, ...data });
+                  await onRefresh();
+                  setEditRow(null);
+                  showToast('Updated successfully', 'success');
+                } catch (e) {
+                  showToast('Failed: ' + String(e), 'error');
+                }
+              }}
+            />
+          )}
+        </div>
+      );
+    }
+
+    function IssueViewModal({ row, onClose }) {
+      const columns = Object.keys(row);
+      
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold">Issue Details - {row['Tracking ID']}</h3>
+            </div>
+            <div className="p-6 space-y-3">
+              {columns.map(col => (
+                <div key={col}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{col}</label>
+                  <p className="text-gray-900">{row[col] || '-'}</p>
+                </div>
+              ))}
+            </div>
+            <div className="p-6 border-t border-gray-200 flex justify-end">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function IssueModal({ row, onClose, onSave }) {
+      const [formData, setFormData] = useState({
+        Status: row.Status || 'Open',
+        'Redressal Remark': row['Redressal Remark'] || ''
+      });
+
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold">Edit Issue - {row['Tracking ID']}</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                <select
+                  value={formData.Status}
+                  onChange={e => setFormData({...formData, Status: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                >
+                  <option value="Open">Open</option>
+                  <option value="InProgress">In Progress</option>
+                  <option value="Resolved">Resolved</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Redressal Remark</label>
+                <textarea
+                  value={formData['Redressal Remark']}
+                  onChange={e => setFormData({...formData, 'Redressal Remark': e.target.value})}
+                  rows="4"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => onSave(formData)}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+
+    // Transactions Page with View/Edit and Upload
+    function TransactionsPage({ data, isAdmin, onRefresh, chartOfAccounts }) {
+      const [search, setSearch] = useState('');
+      const [showAddModal, setShowAddModal] = useState(false);
+      const [viewRow, setViewRow] = useState(null);
+      const [editRow, setEditRow] = useState(null);
+      const [uploading, setUploading] = useState(false);
+
+      const stats = useMemo(() => {
+        const income = data.filter(t => (t.Type || '').toLowerCase() === 'credit').reduce((sum, t) => sum + Number(t.Amount || 0), 0);
+        const expense = data.filter(t => {
+const type = (t.Type || '').toLowerCase().trim();
+return type === 'debit' || type === 'expense';
+}).reduce((sum, t) => sum + Number(t.Amount || 0), 0);
+        return { income, expense, profit: income - expense };
+      }, [data]);
+
+      const filtered = useMemo(() => {
+        if (!search.trim()) return data;
+        const q = search.toLowerCase();
+        return data.filter(r => 
+          Object.values(r).some(v => String(v).toLowerCase().includes(q))
+        );
+      }, [data, search]);
+
+      return (
+        <div className="space-y-6 fade-in">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-white rounded-xl p-4 shadow-sm">
+              <p className="text-xs text-gray-600">Total Income</p>
+              <p className="text-2xl font-bold text-green-600 mt-1">{INR.format(stats.income)}</p>
+            </div>
+            <div className="bg-white rounded-xl p-4 shadow-sm">
+              <p className="text-xs text-gray-600">Total Expense</p>
+              <p className="text-2xl font-bold text-red-600 mt-1">{INR.format(stats.expense)}</p>
+            </div>
+            <div className="bg-white rounded-xl p-4 shadow-sm">
+              <p className="text-xs text-gray-600">Net Profit/Loss</p>
+              <p className={`text-2xl font-bold mt-1 ${stats.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {INR.format(stats.profit)}
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <h2 className="text-xl font-semibold text-gray-900">Transactions ({filtered.length})</h2>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Search..."
+                    className="px-4 py-2 border border-gray-300 rounded-lg"
+                  />
+                  {isAdmin && (
+                    <button
+                      onClick={() => setShowAddModal(true)}
+                      className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center gap-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filtered.map((row, i) => (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-sm">{row.Date}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="line-clamp-1">{row.Description}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`status-badge ${(row.Type || '').toLowerCase() === 'credit' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                          {row.Type || 'Debit'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm font-medium">{INR.format(Number(row.Amount || 0))}</td>
+                      <td className="px-4 py-3 text-sm">{row.Category}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setViewRow(row)}
+                            className="text-blue-500 hover:text-blue-600 text-sm font-medium"
+                          >
+                            View
+                          </button>
+                          {isAdmin && (
+                            <button
+                              onClick={() => setEditRow(row)}
+                              className="text-green-500 hover:text-green-600 text-sm font-medium"
+                            >
+                              Edit
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {viewRow && <TransactionViewModal row={viewRow} onClose={() => setViewRow(null)} />}
+
+          {(showAddModal || editRow) && (
+            <TransactionModal
+              row={editRow}
+              chartOfAccounts={chartOfAccounts}
+              uploading={uploading}
+              onClose={() => { setShowAddModal(false); setEditRow(null); }}
+              onSave={async (data) => {
+                try {
+                  setUploading(true);
+                  
+                  // Handle attachment upload to Drive if it's a base64 string
+                  if (data.Attachment && data.Attachment.startsWith('data:')) {
+                    const fileName = `transaction_${Date.now()}.${data.Attachment.split(';')[0].split('/')[1]}`;
+                    const uploadRes = await fetch(GAS, {
+                      method: 'POST',
+                      headers: {'Content-Type': 'text/plain;charset=utf-8'},
+                      body: JSON.stringify({
+                        op: 'uploadFile',
+                        sheet: 'Transactions',
+                        fileData: data.Attachment,
+                        fileName: fileName
+                      })
+                    });
+                    const uploadData = await uploadRes.json();
+                    if (uploadData.ok && uploadData.url) {
+                      data.Attachment = uploadData.url;
+                    }
+                  }
+                  
+                  if (editRow) {
+                    await api.upsertRow('Transactions', 'Transaction ID', { ...editRow, ...data });
+                  } else {
+                    await api.createRow('Transactions', data);
+                  }
+                  await onRefresh();
+                  setShowAddModal(false);
+                  setEditRow(null);
+                  showToast('Transaction saved', 'success');
+                } catch (e) {
+                  showToast('Failed: ' + String(e), 'error');
+                } finally {
+                  setUploading(false);
+                }
+              }}
+            />
+          )}
+        </div>
+      );
+    }
+
+    function TransactionViewModal({ row, onClose }) {
+      const columns = Object.keys(row);
+      
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold">Transaction Details</h3>
+            </div>
+            <div className="p-6 space-y-3">
+              {columns.map(col => (
+                <div key={col}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{col}</label>
+                  {col === 'Attachment' && row[col] ? (
+                    <a
+                      href={row[col]}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:text-blue-600"
+                    >
+                      View Attachment
+                    </a>
+                  ) : (
+                    <p className="text-gray-900">{row[col] || '-'}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="p-6 border-t border-gray-200 flex justify-end">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function TransactionModal({ row, chartOfAccounts, uploading, onClose, onSave }) {
+      const [formData, setFormData] = useState(row || {
+        Date: new Date().toISOString().split('T')[0],
+        Description: '',
+        Type: 'Credit',
+        Amount: '',
+        Category: '',
+        Attachment: ''
+      });
+
+      const categories = useMemo(() => {
+        return chartOfAccounts.filter(c => 
+          (c.Group || '').toLowerCase() === (formData.Type.toLowerCase() === 'credit' ? 'income' : 'expense')
+        );
+      }, [chartOfAccounts, formData.Type]);
+
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold">{row ? 'Edit' : 'Add'} Transaction</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                  <input
+                    type="date"
+                    value={formData.Date}
+                    onChange={e => setFormData({...formData, Date: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                  <select
+                    value={formData.Type}
+                    onChange={e => setFormData({...formData, Type: e.target.value, Category: ''})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  >
+                    <option value="Credit">Income (Credit)</option>
+                    <option value="Debit">Expense (Debit)</option>
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                  <input
+                    type="text"
+                    value={formData.Description}
+                    onChange={e => setFormData({...formData, Description: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Amount</label>
+                  <input
+                    type="number"
+                    value={formData.Amount}
+                    onChange={e => setFormData({...formData, Amount: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                  <select
+                    value={formData.Category}
+                    onChange={e => setFormData({...formData, Category: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map((cat, i) => (
+                      <option key={i} value={cat.Category}>{cat.Category}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Attachment</label>
+                  <input
+                    type="file"
+                    onChange={e => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = () => setFormData({...formData, Attachment: reader.result});
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                onClick={onClose}
+                disabled={uploading}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => onSave(formData)}
+                disabled={uploading}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
+              >
+                {uploading && <div className="spinner" style={{width: '16px', height: '16px', borderWidth: '2px'}} />}
+                {uploading ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Documents Page with View
+    function DocumentsPage({ data, isAdmin, onRefresh }) {
+      const [search, setSearch] = useState('');
+      const [showAddModal, setShowAddModal] = useState(false);
+      const [viewRow, setViewRow] = useState(null);
+      const [uploading, setUploading] = useState(false);
+
+      const filtered = useMemo(() => {
+        if (!search.trim()) return data;
+        const q = search.toLowerCase();
+        return data.filter(r => 
+          Object.values(r).some(v => String(v).toLowerCase().includes(q))
+        );
+      }, [data, search]);
+
+      const nextSerial = useMemo(() => {
+        const serials = data.map(d => Number(d['Serial Number']) || 0);
+        return serials.length ? Math.max(...serials) + 1 : 1;
+      }, [data]);
+
+      return (
+        <div className="space-y-6 fade-in">
+          <div className="bg-white rounded-2xl shadow-sm">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <h2 className="text-xl font-semibold text-gray-900">Documents ({filtered.length})</h2>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Search..."
+                    className="px-4 py-2 border border-gray-300 rounded-lg"
+                  />
+                  {isAdmin && (
+                    <button
+                      onClick={() => setShowAddModal(true)}
+                      className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center gap-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Serial #</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filtered.map((row, i) => (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-sm font-medium">{row['Serial Number']}</td>
+                      <td className="px-4 py-3 text-sm">{row.Title}</td>
+                      <td className="px-4 py-3 text-sm">{row.Date}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="line-clamp-1">{row.Description}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => setViewRow(row)}
+                          className="text-blue-500 hover:text-blue-600 text-sm font-medium"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {viewRow && <DocumentViewModal row={viewRow} onClose={() => setViewRow(null)} />}
+
+          {showAddModal && (
+            <DocumentModal
+              nextSerial={nextSerial}
+              uploading={uploading}
+              onClose={() => setShowAddModal(false)}
+              onSave={async (data) => {
+                try {
+                  setUploading(true);
+                  
+                  // Handle file upload to Drive if it's a base64 string
+                  if (data.Media && data.Media.startsWith('data:')) {
+                    const fileName = `document_${Date.now()}.${data.Media.split(';')[0].split('/')[1]}`;
+                    const uploadRes = await fetch(GAS, {
+                      method: 'POST',
+                      headers: {'Content-Type': 'text/plain;charset=utf-8'},
+                      body: JSON.stringify({
+                        op: 'uploadFile',
+                        sheet: 'Documents',
+                        fileData: data.Media,
+                        fileName: fileName
+                      })
+                    });
+                    const uploadData = await uploadRes.json();
+                    if (uploadData.ok && uploadData.url) {
+                      data.Media = uploadData.url;
+                    }
+                  }
+                  
+                  await api.createRow('Documents', data);
+                  await onRefresh();
+                  setShowAddModal(false);
+                  showToast('Document added', 'success');
+                } catch (e) {
+                  showToast('Failed: ' + String(e), 'error');
+                } finally {
+                  setUploading(false);
+                }
+              }}
+            />
+          )}
+        </div>
+      );
+    }
+
+    function DocumentViewModal({ row, onClose }) {
+      const columns = Object.keys(row);
+      
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold">Document Details</h3>
+            </div>
+            <div className="p-6 space-y-3">
+              {columns.map(col => (
+                <div key={col}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{col}</label>
+                  {col === 'Media' && row[col] ? (
+                    row[col].match(/\.(jpg|jpeg|png|gif)$/i) ? (
+                      <img src={row[col]} alt="Document" className="max-w-full h-auto rounded-lg" />
+                    ) : (
+                      <a
+                        href={row[col]}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:text-blue-600 flex items-center gap-2"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        View Attachment
+                      </a>
+                    )
+                  ) : (
+                    <p className="text-gray-900">{row[col] || '-'}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="p-6 border-t border-gray-200 flex justify-end">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function DocumentModal({ nextSerial, uploading, onClose, onSave }) {
+      const [formData, setFormData] = useState({
+        'Serial Number': nextSerial,
+        Title: '',
+        Date: new Date().toISOString().split('T')[0],
+        Description: '',
+        Media: ''
+      });
+
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold">Add Document</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-800">Auto Serial Number: <span className="font-bold">#{nextSerial}</span></p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
+                <input
+                  type="text"
+                  value={formData.Title}
+                  onChange={e => setFormData({...formData, Title: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                <input
+                  type="date"
+                  value={formData.Date}
+                  onChange={e => setFormData({...formData, Date: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <textarea
+                  value={formData.Description}
+                  onChange={e => setFormData({...formData, Description: e.target.value})}
+                  rows="3"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Attach File</label>
+                <input
+                  type="file"
+                  onChange={e => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = () => setFormData({...formData, Media: reader.result});
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                onClick={onClose}
+                disabled={uploading}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => onSave(formData)}
+                disabled={uploading}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
+              >
+                {uploading && <div className="spinner" style={{width: '16px', height: '16px', borderWidth: '2px'}} />}
+                {uploading ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Generic table for other pages
+    function GenericTable({ title, data, onRefresh, isAdmin }) {
+      const [search, setSearch] = useState('');
+
+      const filtered = useMemo(() => {
+        if (!search.trim()) return data;
+        const q = search.toLowerCase();
+        return data.filter(r => 
+          Object.values(r).some(v => String(v).toLowerCase().includes(q))
+        );
+      }, [data, search]);
+
+      const columns = useMemo(() => {
+        if (!data.length) return [];
+        return Object.keys(data[0]);
+      }, [data]);
+
+      return (
+        <div className="bg-white rounded-2xl shadow-sm fade-in">
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">{title} ({filtered.length})</h2>
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search..."
+                className="px-4 py-2 border border-gray-300 rounded-lg"
+              />
+            </div>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  {columns.map(col => (
+                    <th key={col} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      {col}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {filtered.map((row, i) => (
+                  <tr key={i} className="hover:bg-gray-50">
+                    {columns.map(col => (
+                      <td key={col} className="px-4 py-3 text-sm">
+                        {String(row[col] || '')}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            
+            {filtered.length === 0 && (
+              <div className="text-center py-12 text-gray-500">
+                No data found
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Main App Component
+    function App() {
+      const [session, setSession] = useState({ token: null, role: null, username: null });
+      const [view, setView] = useState('dashboard');
+      const [data, setData] = useState({
+        Directory: [],
+        Notices: [],
+        Issues: [],
+        Transactions: [],
+        Documents: [],
+        Voters: [],
+        OpeningBalances: [],
+        ChartOfAccounts: []
+      });
+      const [loading, setLoading] = useState(true);
+      const [sidebarOpen, setSidebarOpen] = useState(true);
+
+      useEffect(() => {
+        const token = qs.get('session') || localStorage.getItem('session');
+        if (token) {
+          (async () => {
+            try {
+              const s = await api.sessionInfo(token);
+              if (s?.ok) {
+                setSession({
+                  token,
+                  role: (s.role || 'user').toLowerCase(),
+                  username: s.username || 'user'
+                });
+              } else {
+                localStorage.removeItem('session');
+              }
+            } catch (e) {
+              console.error(e);
+            }
+            await refreshData();
+          })();
+        } else {
+          setLoading(false);
         }
-        const row = state.all.find(function(x){ return String(x["Tracking ID"])===String(id); });
-        if(row){
-          row.Status = status;
-          row["Redressal Remark"] = remark;
-          if(status==="Resolved" && !row.__resolved){ row.__resolved = new Date(); row["Date and Time Resolved"] = row.__resolved.toISOString(); }
-          row.__computed_time = row.__raised && row.__resolved ? Math.max(0, row.__resolved - row.__raised) : row.__computed_time;
+      }, []);
+
+      async function refreshData() {
+        setLoading(true);
+        try {
+          const results = await Promise.all([
+            api.list.Directory(),
+            api.list.Notices(),
+            api.list.Issues(),
+            api.list.Transactions(),
+            api.list.Documents(),
+            api.list.Voters(),
+            api.list.OpeningBalances(),
+            api.list.ChartOfAccounts()
+          ]);
+          
+          setData({
+            Directory: results[0]?.rows || [],
+            Notices: results[1]?.rows || [],
+            Issues: results[2]?.rows || [],
+            Transactions: results[3]?.rows || [],
+            Documents: results[4]?.rows || [],
+            Voters: results[5]?.rows || [],
+            OpeningBalances: results[6]?.rows || [],
+            ChartOfAccounts: results[7]?.rows || []
+          });
+        } catch (e) {
+          showToast('Failed to load data', 'error');
+        } finally {
+          setLoading(false);
         }
-        delete state.editing[id];
-        applyFilters();
-      }catch(e){ alert('Save failed: ' + e.message); }
+      }
+
+      if (!session.token) {
+        return <LoginScreen onSuccess={s => { setSession(s); refreshData(); }} />;
+      }
+
+      const isAdmin = session.role === 'admin';
+
+      const navItems = [
+        { id: 'dashboard', label: 'Dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+        { id: 'Directory', label: 'Directory', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
+        { id: 'Notices', label: 'Notices', icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9' },
+        { id: 'Issues', label: 'Issues', icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z' },
+        { id: 'Documents', label: 'Documents', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+        { id: 'Voters', label: 'Voters', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
+      ];
+
+      // Add admin-only menu items
+      if (isAdmin) {
+        navItems.push(
+          { id: 'Transactions', label: 'Transactions', icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+          { id: 'OpeningBalances', label: 'Opening Balances', icon: 'M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z' },
+          { id: 'ChartOfAccounts', label: 'Chart of Accounts', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01' }
+        );
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50">
+          <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
+            <div className="px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between h-16">
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => setSidebarOpen(!sidebarOpen)}
+                    className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                  </button>
+                  
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h1 className="text-lg font-semibold text-gray-900">Global Hillview</h1>
+                      <p className="text-xs text-gray-500">Sec-11, Sohna, Gurgaon</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={refreshData}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    title="Refresh data"
+                  >
+                    <svg className={`w-5 h-5 text-gray-600 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  </button>
+
+                  <div className="flex items-center gap-3 pl-3 border-l border-gray-200">
+                    <div className="text-right hidden sm:block">
+                      <p className="text-sm font-medium text-gray-900">{session.username}</p>
+                      <p className="text-xs text-gray-500 capitalize">{session.role}</p>
+                    </div>
+                    
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${session.role === 'admin' ? 'bg-blue-500' : 'bg-gray-500'}`}>
+                      {session.username[0].toUpperCase()}
+                    </div>
+                    
+                    <button
+                      onClick={() => {
+                        if (confirm('Are you sure you want to logout?')) {
+                          localStorage.removeItem('session');
+                          setSession({ token: null, role: null, username: null });
+                        }
+                      }}
+                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                      title="Logout"
+                    >
+                      <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          <div className="flex">
+            <aside className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:sticky top-16 left-0 z-20 w-64 h-[calc(100vh-4rem)] bg-white border-r border-gray-200 transition-transform duration-300`}>
+              <nav className="p-4 space-y-1">
+                {navItems.map(item => (
+                  <button
+                    key={item.id}
+                    onClick={() => { setView(item.id); setSidebarOpen(false); }}
+                    className={`nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left ${view === item.id ? 'active' : 'text-gray-700 hover:text-gray-900'}`}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={item.icon} />
+                    </svg>
+                    <span className="text-sm font-medium">{item.label}</span>
+                  </button>
+                ))}
+              </nav>
+            </aside>
+
+            {sidebarOpen && (
+              <div
+                onClick={() => setSidebarOpen(false)}
+                className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-10 top-16"
+              />
+            )}
+
+            <main className="flex-1 p-4 sm:p-6 lg:p-8">
+              {loading ? (
+                <div className="flex items-center justify-center h-64">
+                  <div className="spinner" />
+                </div>
+              ) : view === 'dashboard' ? (
+                <Dashboard data={data} onNavigate={setView} isAdmin={isAdmin} />
+              ) : view === 'Directory' ? (
+                <DirectoryPage data={data.Directory} isAdmin={isAdmin} onRefresh={refreshData} />
+              ) : view === 'Issues' ? (
+                <IssuesPage data={data.Issues} isAdmin={isAdmin} onRefresh={refreshData} />
+              ) : view === 'Notices' ? (
+                <NoticesPage data={data.Notices} isAdmin={isAdmin} onRefresh={refreshData} />
+              ) : view === 'Transactions' ? (
+                isAdmin ? (
+                  <TransactionsPage data={data.Transactions} isAdmin={isAdmin} onRefresh={refreshData} chartOfAccounts={data.ChartOfAccounts} />
+                ) : (
+                  <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
+                    <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Access Restricted</h3>
+                    <p className="text-gray-600">This section is only available to administrators.</p>
+                  </div>
+                )
+              ) : view === 'Documents' ? (
+                <DocumentsPage data={data.Documents} isAdmin={isAdmin} onRefresh={refreshData} />
+              ) : view === 'Voters' ? (
+                <GenericTable title="Voters" data={data.Voters} isAdmin={isAdmin} onRefresh={refreshData} />
+              ) : view === 'OpeningBalances' ? (
+                isAdmin ? (
+                  <GenericTable title="Opening Balances" data={data.OpeningBalances} isAdmin={isAdmin} onRefresh={refreshData} />
+                ) : (
+                  <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
+                    <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Access Restricted</h3>
+                    <p className="text-gray-600">This section is only available to administrators.</p>
+                  </div>
+                )
+              ) : view === 'ChartOfAccounts' ? (
+                isAdmin ? (
+                  <GenericTable title="Chart of Accounts" data={data.ChartOfAccounts} isAdmin={isAdmin} onRefresh={refreshData} />
+                ) : (
+                  <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
+                    <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Access Restricted</h3>
+                    <p className="text-gray-600">This section is only available to administrators.</p>
+                  </div>
+                )
+              ) : (
+                <GenericTable title={view} data={data[view]} isAdmin={isAdmin} onRefresh={refreshData} />
+              )}
+            </main>
+          </div>
+        </div>
+      );
     }
-    window.saveRow = saveRow;
 
-    function render(){
-      const key = state.sort.key, dir = state.sort.dir;
-      const data = state.filtered.slice().sort(function(a,b){
-        const av = key==="__computed_time" ? a.__computed_time : (key==="Date and Time Raised" ? a.__raised : (key==="Date and Time Resolved" ? a.__resolved : a[key]));
-        const bv = key==="__computed_time" ? b.__computed_time : (key==="Date and Time Raised" ? b.__raised : (key==="Date and Time Resolved" ? b.__resolved : b[key]));
-        const aa = av==null ? "" : av, bb = bv==null ? "" : bv;
-        if(aa<bb) return dir==="asc"?-1:1; if(aa>bb) return dir==="asc"?1:-1; return 0;
-      });
-
-      const start = (state.page-1)*state.pageSize;
-      const slice = data.slice(start, start+state.pageSize);
-
-      const total = state.filtered.length;
-      const open = state.filtered.filter(function(x){return x.Status==="Open";}).length;
-      const progress = state.filtered.filter(function(x){return x.Status==="InProgress";}).length;
-      const resolvedRows = state.filtered.filter(function(x){return x.Status==="Resolved";});
-      const resolved = resolvedRows.length;
-      const avgMs = resolvedRows.length ? Math.round(resolvedRows.reduce(function(s,x){return s+(x.__computed_time||0);},0)/resolvedRows.length) : 0;
-      const ratings = resolvedRows.map(function(x){return parseFloat(x["Feedback Rating"]);}).filter(function(n){return !isNaN(n);});
-      const avgRating = ratings.length ? (ratings.reduce(function(a,b){return a+b;},0)/ratings.length).toFixed(1) : "0";
-
-      document.getElementById("kpiTotal").textContent = total;
-      document.getElementById("kpiOpen").textContent = open;
-      document.getElementById("kpiProgress").textContent = progress;
-      document.getElementById("kpiResolved").textContent = resolved;
-      document.getElementById("kpiAvgTime").textContent = msToHuman(avgMs);
-      document.getElementById("kpiAvgRating").textContent = avgRating;
-
-      const tbody = document.querySelector("#grid tbody");
-      tbody.innerHTML = "";
-      slice.forEach(function(r){
-        const cells = rowEditorCells(r);
-        const raisedStr = fmtDate(r.__raised, state.tz);
-        const resolvedStr = fmtDate(r.__resolved, state.tz);
-        const timeStr = msToHuman(r.__computed_time);
-        const tr = document.createElement("tr");
-        tr.innerHTML =
-          '<td><span class="muted" style="border-bottom:1px dashed var(--muted); cursor:copy" title="Click to copy" onclick="navigator.clipboard.writeText(\''+String(r["Tracking ID"]||"")+'\')">'+(r["Tracking ID"]||"")+'</span></td>'+
-          '<td>'+raisedStr+'</td>'+
-          '<td>'+(r["Tower"]||"")+'</td>'+
-          '<td>'+(r["Flat"]||"")+'</td>'+
-          '<td>'+(r["Issue"]||"")+'</td>'+
-          '<td>'+(r["Description"]||"")+'</td>'+
-          '<td>'+renderMediaCell(r["Media URL"])+'</td>'+
-          '<td>'+cells.status+'</td>'+
-          '<td>'+cells.remark+'</td>'+
-          '<td>'+(r["User ID"]||"")+'</td>'+
-          '<td>'+resolvedStr+'</td>'+
-          '<td>'+timeStr+'</td>'+
-          '<td>'+(r["Feedback Rating"]||"")+'</td>';
-        tbody.appendChild(tr);
-      });
-
-      Array.prototype.forEach.call(document.querySelectorAll("th.sortable"), function(th){
-        th.style.textDecoration = (th.dataset.key===state.sort.key) ? "underline" : "none";
-      });
-
-      const maxPage = Math.max(1, Math.ceil(data.length / state.pageSize));
-      document.getElementById("pageInfo").textContent = 'Page '+state.page+' / '+maxPage;
-      document.getElementById("rowCount").textContent = data.length+' row(s), showing '+slice.length;
-    }
-
-    function exportCSV(){
-      const rows = state.filtered.length ? state.filtered : state.all;
-      const hdr = ["Tracking ID","Date & Time Raised","Tower","Flat","Issue","Description","Media","Status","Redressal Remark","User ID","Date & Time Resolved","Time Taken","Feedback"];
-      const csvRows = [hdr.join(",")];
-      rows.forEach(function(r){
-        const raised = fmtDate(r.__raised, state.tz);
-        const resolved = fmtDate(r.__resolved, state.tz);
-        const time = msToHuman(r.__computed_time);
-        const vals = [ r["Tracking ID"]||"", raised, r["Tower"]||"", r["Flat"]||"", r["Issue"]||"", String(r["Description"]||"").replace(/"/g,'""'),
-                       r["Media URL"]||"", r["Status"]||"", String(r["Redressal Remark"]||"").replace(/"/g,'""'),
-                       r["User ID"]||"", resolved, time, r["Feedback Rating"]||"" ]
-                       .map(function(v){ return '"'+String(v)+'"'; });
-        csvRows.push(vals.join(","));
-      });
-      const blob = new Blob([csvRows.join("\n")], {type:"text/csv;charset=utf-8"});
-      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "helpdesk.csv"; a.click();
-    }
-
-    function debounce(fn,ms){ var t; return function(){ var args=arguments; clearTimeout(t); t=setTimeout(function(){ fn.apply(null,args); },ms); } }
-
-    async function init(){
-      if (!getTok()) { location.href = "/login"; return; }
-      await verifySession();
-      startHeartbeat();
-
-      document.getElementById("toggleDark").addEventListener("click", function(){ document.body.classList.toggle("dark"); });
-      document.getElementById("exportCsv").addEventListener("click", exportCSV);
-      document.getElementById("applyBtn").addEventListener("click", applyFilters);
-      document.getElementById("resetBtn").addEventListener("click", resetFilters);
-      document.getElementById("prevPage").addEventListener("click", function(){ if(state.page>1){ state.page--; render(); }});
-      document.getElementById("nextPage").addEventListener("click", function(){ const max=Math.max(1, Math.ceil(state.filtered.length/state.pageSize)); if(state.page<max){ state.page++; render(); }});
-      document.getElementById("pageSize").addEventListener("change", function(e){ state.pageSize=Math.max(5, Math.min(100, parseInt(e.target.value,10)||10)); state.page=1; render(); });
-      document.getElementById("tzSelect").addEventListener("change", function(e){ state.tz=e.target.value; render(); });
-      document.getElementById("search").addEventListener("input", debounce(applyFilters, 250));
-      document.getElementById("logoutBtn").addEventListener("click", logoutNow);
-      document.getElementById("adminBtn").addEventListener("click", function(){ if(state.isAdmin) location.href='/admin'; });
-
-      // Nav
-      document.getElementById("directoryBtn").addEventListener("click", function(){ location.href='/directory.html'; });
-      document.getElementById("noticesBtn").addEventListener("click", function(){ location.href='/notices.html'; });
-      document.getElementById("docsBtn").addEventListener("click", function(){ location.href='/documents.html'; });
-      document.getElementById("financeBtn").addEventListener("click", function(){ location.href='/finance.html'; });
-
-      await fetchData();
-      state.timer = setInterval(async function(){
-        try { await verifySession(); } catch (e) { return; }
-        if(document.getElementById("autoRefresh").checked) fetchData();
-      }, 60000);
-
-      setStickyHeights();
-    }
-    window.onload = init;
-
-    document.addEventListener('DOMContentLoaded', function(){
-      Array.prototype.forEach.call(document.querySelectorAll("th.sortable"), function(th){
-        th.addEventListener("click", function(){
-          const key = th.dataset.key;
-          if(state.sort.key === key){ state.sort.dir = state.sort.dir === "asc" ? "desc" : "asc"; }
-          else { state.sort.key = key; state.sort.dir = "asc"; }
-          render();
-        });
-      });
-    });
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
 </body>
 </html>
