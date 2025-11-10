@@ -861,7 +861,7 @@ return type === 'debit' || type === 'expense';
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subject</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase max-w-xs truncate">Description</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                   </tr>
                 </thead>
@@ -871,7 +871,7 @@ return type === 'debit' || type === 'expense';
                       <td className="px-4 py-3 text-sm">{row.Date}</td>
                       <td className="px-4 py-3 text-sm font-medium">{row.Subject}</td>
                       <td className="px-4 py-3 text-sm">
-                        <span className="line-clamp-2">{row.Description}</span>
+                      <span className="block max-w-xs truncate">{row.Description}</span>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
@@ -1685,7 +1685,7 @@ return type === 'debit' || type === 'expense';
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Serial #</th>
+              
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
@@ -1695,7 +1695,7 @@ return type === 'debit' || type === 'expense';
                 <tbody className="divide-y divide-gray-200">
                   {filtered.map((row, i) => (
                     <tr key={i} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-medium">{row['Serial Number']}</td>
+                      
                       <td className="px-4 py-3 text-sm">{row.Title}</td>
                       <td className="px-4 py-3 text-sm">{row.Date}</td>
                       <td className="px-4 py-3 text-sm">
