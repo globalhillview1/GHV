@@ -1199,28 +1199,31 @@ return type === 'debit' || type === 'expense';
           {viewRow && <IssueViewModal row={viewRow} onClose={() => setViewRow(null)} />}
           
           {editRow && (
-            <IssueModal
-              row={editRow}
-              onClose={() => setEditRow(null)}
-onSave={async (data) => {
-  try {
-    // Combine all original data with updates
-    const fullUpdate = {
-      'Tracking ID': editRow['Tracking ID'],
-      Status: data.Status,
-      'Redressal Remark': data['Redressal Remark']
-    };
-    
-    await api.upsertRow('Issues', 'Tracking ID', fullUpdate);
-    await onRefresh();
-    setEditRow(null);
-    showToast('Updated successfully', 'success');
-  } catch (e) {
-    console.error('Update error:', e);
-    showToast('Failed to update: ' + String(e.message || e), 'error');
-  }
-}}
+  <IssueModal
+    row={editRow}
+    onClose={() => setEditRow(null)}
+    onSave={async (data) => {
+      try {
+        // Combine all original data with updates
+        const fullUpdate = {
+          'Tracking ID': editRow['Tracking ID'],
+          Status: data.Status,
+          'Redressal Remark': data['Redressal Remark']
+        };
+        
+        await api.upsertRow('Issues', 'Tracking ID', fullUpdate);
+        await onRefresh();
+        setEditRow(null);
+        showToast('Updated successfully', 'success');
+      } catch (e) {
+        console.error('Update error:', e);
+        showToast('Failed to update: ' + String(e.message || e), 'error');
+      }
+    }}
+  />
+)}
 
+function IssueViewModal({ row, onClose }) {
     function IssueViewModal({ row, onClose }) {
   const columns = Object.keys(row);
   
@@ -1238,7 +1241,7 @@ onSave={async (data) => {
                 row[col].match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
                   <img src={row[col]} alt="Media" className="max-w-full h-auto rounded-lg" />
                 ) : (
-                  
+                  <a
                     href={row[col]}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -2248,7 +2251,8 @@ return type === 'debit' || type === 'expense';
       );
     }
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    const root = ReactDOM.createRoot(document.getElementById('root'));    
+    root.render(<App />);;
   </script>
 </body>
 </html>
