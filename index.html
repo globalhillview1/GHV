@@ -729,12 +729,28 @@ return type === 'debit' || type === 'expense';
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Joined On</label>
-                  <input
-                    type="date"
-                    value={formData['Joined On'] || ''}
-                    onChange={e => setFormData({...formData, 'Joined On': e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                  />
+                  {formData['Joined On'] ? (
+  <div className="flex items-center gap-3">
+    <div className="px-3 py-2 rounded-lg bg-gray-100 text-gray-800">
+      Joined on: {new Date(formData['Joined On']).toLocaleDateString()}
+    </div>
+    <button
+      type="button"
+      className="text-sm underline text-blue-600"
+      onClick={() => setFormData({ ...formData, 'Joined On': '' })}
+    >
+      Change
+    </button>
+  </div>
+) : (
+  <input
+    type="date"
+    value={formData['Joined On'] || ''}
+    onChange={e => setFormData({ ...formData, 'Joined On': e.target.value })}
+    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+  />
+)}
+
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Manager</label>
