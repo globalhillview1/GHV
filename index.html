@@ -585,10 +585,22 @@ return type === 'debit' || type === 'expense';
                 <tbody className="divide-y divide-gray-200">
                   {filtered.map((row, i) => (
                     <tr key={i} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        {row.Photo ? (
-                          <img src={row.Photo} alt="Photo" className="w-10 h-10 rounded-full object-cover" />
-                        ) : (
+                     <td className="px-4 py-3">
+  {row.Photo ? (
+    <img
+      src={driveDirectLink(row.Photo, 80)}
+      alt="Photo"
+      className="w-10 h-10 rounded-full object-cover bg-gray-100"
+      referrerPolicy="no-referrer"
+      onError={(e) => { e.target.src = '/placeholder-avatar.png'; }}
+    />
+  ) : (
+    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-xs">
+      {(row.Name || row['Employee Name'] || 'N')[0]}
+    </div>
+  )}
+</td>
+
                           <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-xs">
                             {(row.Name || row['Employee Name'] || 'N')[0]}
                           </div>
