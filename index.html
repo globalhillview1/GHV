@@ -975,7 +975,7 @@ return type === 'debit' || type === 'expense';
     {row.Media.match(/\.(jpg|jpeg|png|gif)$/i) ? (
       <img src={row.Media} alt="Notice" className="max-w-full h-auto rounded-lg" />
     ) : (
-      
+      <a
         href={row.Media}
         target="_blank"
         rel="noopener noreferrer"
@@ -1223,7 +1223,6 @@ return type === 'debit' || type === 'expense';
 )}
 
 function IssueViewModal({ row, onClose }) {
-    function IssueViewModal({ row, onClose }) {
   const columns = Object.keys(row);
   
   return (
@@ -1240,7 +1239,7 @@ function IssueViewModal({ row, onClose }) {
                 row[col].match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
                   <img src={row[col]} alt="Media" className="max-w-full h-auto rounded-lg" />
                ) : (
-  
+  <a
     href={row[col]}
     target="_blank"
     rel="noopener noreferrer"
@@ -1815,7 +1814,7 @@ return type === 'debit' || type === 'expense';
   row[col].match(/\.(jpg|jpeg|png|gif)$/i) ? (
     <img src={row[col]} alt="Document" className="max-w-full h-auto rounded-lg" />
   ) : (
-    
+    <a
       href={row[col]}
       target="_blank"
       rel="noopener noreferrer"
