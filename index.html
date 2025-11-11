@@ -124,6 +124,20 @@
     const GAS = qs.get('gas') || window.ENV_GAS_URL || '';
     const INR = new Intl.NumberFormat('en-IN', { style:'currency', currency:'INR', maximumFractionDigits:0 });
 
+      // 🔽 ADD THIS HELPER RIGHT HERE
+  function driveDirectLink(url, size = 100) {
+    if (!url) return "";
+    const match1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    const match2 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    const id = (match1 && match1[1]) || (match2 && match2[1]);
+    return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w${size}` : url;
+  }
+
+  // Continue with rest of your app code...
+  async function fetchWithTimeout(url, opts = {}, ms = 12000) {
+    ...
+  }
+
     async function fetchWithTimeout(url, opts={}, ms=12000){
       const ctl = new AbortController();
       const id = setTimeout(() => ctl.abort(), ms);
