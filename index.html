@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Global Hillview – Society Portal</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script>
     window.ENV_GAS_URL = "https://script.google.com/macros/s/AKfycbxzoyXJNkqqxNZprAfvAzpsszrkAKXiposW1WjbqHO-4Wu_5fJk7hJ6HCqihF76TKED/exec";
@@ -112,13 +112,20 @@
       background: #3b82f6;
       color: white;
     }
+
+    .line-clamp-1 {
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 1;
+    }
   </style>
 </head>
 <body class="bg-gray-50">
   <div id="root"></div>
 
-  <script type="text/babel">
-    const { useEffect, useState, useMemo, useRef } = React;
+  <script type="text/babel" data-type="module">
+    const { useState, useEffect, useMemo } = React;
     
     const qs = new URLSearchParams(location.search);
     const GAS = qs.get('gas') || window.ENV_GAS_URL || '';
@@ -248,7 +255,6 @@
                 </div>
                 <h1 className="text-2xl font-bold text-gray-900">Global Hillview</h1>
                 <p className="text-gray-600 mt-2">Society Management Portal</p>
-          
               </div>
 
               <form onSubmit={handleLogin} className="space-y-4">
@@ -314,11 +320,10 @@
           .filter(t => (t.Type || '').toLowerCase() === 'credit')
           .reduce((sum, t) => sum + Number(t.Amount || 0), 0);
         const expenses = data.Transactions
-          // NEW (correct)
-.filter(t => {
-const type = (t.Type || '').toLowerCase().trim();
-return type === 'debit' || type === 'expense';
-})
+          .filter(t => {
+            const type = (t.Type || '').toLowerCase().trim();
+            return type === 'debit' || type === 'expense';
+          })
           .reduce((sum, t) => sum + Number(t.Amount || 0), 0);
         
         return { openIssues, totalEnviroStaff, collected, expenses };
@@ -467,7 +472,6 @@ return type === 'debit' || type === 'expense';
       );
     }
 
-    // Directory Page with Upload to Drive
     function DirectoryPage({ data, isAdmin, onRefresh }) {
       const [search, setSearch] = useState('');
       const [activeFilter, setActiveFilter] = useState('all');
@@ -579,7 +583,7 @@ return type === 'debit' || type === 'expense';
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Joined On</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Manager</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Active</th>
-                    {isAdmin && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>}
+                    {isAdmin && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
