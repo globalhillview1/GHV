@@ -9,7 +9,7 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script>
-    window.ENV_GAS_URL = "https://script.google.com/macros/s/AKfycbxzoyXJNkqqxNZprAfvAzpsszrkAKXiposW1WjbqHO-4Wu_5fJk7hJ6HCqihF76TKED/exec";
+    window.ENV_GAS_URL = "https://script.google.com/macros/s/AKfycbzuf6uRpgeNmAm6KzOMEOlTHM7PgdqVaZ82KwU-gpNk0uBl_2p4jA3u7BC-eFS8oaPw/exec";
   </script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -133,10 +133,6 @@
     return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w${size}` : url;
   }
 
-  // Continue with rest of your app code...
-  async function fetchWithTimeout(url, opts = {}, ms = 12000) {
-    ...
-  }
 
     async function fetchWithTimeout(url, opts={}, ms=12000){
       const ctl = new AbortController();
@@ -158,16 +154,17 @@
       return r.json();
     }
 
-    async function postPlain(body){
-      if(!GAS) throw new Error('Backend not configured');
-      const r = await fetchWithTimeout(GAS, {
-        method: 'POST',
-        headers: {'Content-Type': 'text/plain;charset=utf-8'},
-        body: JSON.stringify(body)
-      });
-      if(!r.ok) throw new Error(await r.text().catch(() => r.statusText));
-      return r.json();
-    }
+async function postPlain(body){
+  if(!GAS) throw new Error('Backend not configured');
+  // Use longer timeout for file uploads (60 seconds)
+  const r = await fetchWithTimeout(GAS, {
+    method: 'POST',
+    headers: {'Content-Type': 'text/plain;charset=utf-8'},
+    body: JSON.stringify(body)
+  }, 60000); // 60 second timeout for large files
+  if(!r.ok) throw new Error(await r.text().catch(() => r.statusText));
+  return r.json();
+}
 
     const api = {
       async login(u, p) {
@@ -599,27 +596,21 @@ return type === 'debit' || type === 'expense';
                 <tbody className="divide-y divide-gray-200">
                   {filtered.map((row, i) => (
                     <tr key={i} className="hover:bg-gray-50">
-                     <td className="px-4 py-3">
+<td className="px-4 py-3">
   {row.Photo ? (
     <img
       src={driveDirectLink(row.Photo, 80)}
       alt="Photo"
       className="w-10 h-10 rounded-full object-cover bg-gray-100"
       referrerPolicy="no-referrer"
-      onError={(e) => { e.target.src = '/placeholder-avatar.png'; }}
+      onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling.style.display = 'flex'; }}
     />
-  ) : (
-    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-xs">
-      {(row.Name || row['Employee Name'] || 'N')[0]}
-    </div>
-  )}
+  ) : null}
+  <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-xs" style={{display: row.Photo ? 'none' : 'flex'}}>
+    {(row.Name || row['Employee Name'] || 'N')[0]}
+  </div>
 </td>
 
-                          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-xs">
-                            {(row.Name || row['Employee Name'] || 'N')[0]}
-                          </div>
-                        )}
-                      </td>
                       <td className="px-4 py-3 text-sm">{row.Name || row['Employee Name']}</td>
                       <td className="px-4 py-3 text-sm">{row.Department || row.Designation}</td>
                       <td className="px-4 py-3 text-sm">{row.Gender}</td>
@@ -654,43 +645,51 @@ return type === 'debit' || type === 'expense';
               uploading={uploading}
               onClose={() => { setShowAddModal(false); setEditRow(null); }}
               onSave={async (data) => {
-                try {
-                  setUploading(true);
-                  
-                  // Handle photo upload to Drive if it's a base64 string
-                  if (data.Photo && data.Photo.startsWith('data:')) {
-                    const fileName = `photo_${Date.now()}.${data.Photo.split(';')[0].split('/')[1]}`;
-                    const uploadRes = await fetch(GAS, {
-                      method: 'POST',
-                      headers: {'Content-Type': 'text/plain;charset=utf-8'},
-                      body: JSON.stringify({
-                        op: 'uploadFile',
-                        sheet: 'Directory',
-                        fileData: data.Photo,
-                        fileName: fileName
-                      })
-                    });
-                    const uploadData = await uploadRes.json();
-                    if (uploadData.ok && uploadData.url) {
-                      data.Photo = uploadData.url;
-                    }
-                  }
-                  
-                  if (editRow) {
-                    await api.upsertRow('Directory', 'Serial', { ...editRow, ...data });
-                  } else {
-                    await api.createRow('Directory', data);
-                  }
-                  await onRefresh();
-                  setShowAddModal(false);
-                  setEditRow(null);
-                  showToast('Saved successfully', 'success');
-                } catch (e) {
-                  showToast('Failed: ' + String(e), 'error');
-                } finally {
-                  setUploading(false);
-                }
-              }}
+  try {
+    setUploading(true);
+    
+    // Handle photo upload to Drive if it's a base64 string
+    if (data.Photo && data.Photo.startsWith('data:')) {
+      try {
+        const mimeMatch = data.Photo.match(/data:(.*?);/);
+        const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+        const ext = mimeType.split('/')[1] || 'jpg';
+        const fileName = `photo_${Date.now()}.${ext}`;
+        
+        const uploadRes = await postPlain({
+          op: 'uploadFile',
+          sheet: 'Directory',
+          fileData: data.Photo,
+          fileName: fileName
+        });
+        
+        if (uploadRes.ok && uploadRes.file && uploadRes.file.url) {
+          data.Photo = uploadRes.file.url;
+        } else {
+          throw new Error(uploadRes.error || 'Upload failed');
+        }
+      } catch (uploadErr) {
+        showToast('Photo upload failed: ' + uploadErr.message, 'error');
+        setUploading(false);
+        return;
+      }
+    }
+    
+    if (editRow) {
+      await api.upsertRow('Directory', 'Serial', { ...editRow, ...data });
+    } else {
+      await api.createRow('Directory', data);
+    }
+    await onRefresh();
+    setShowAddModal(false);
+    setEditRow(null);
+    showToast('Saved successfully', 'success');
+  } catch (e) {
+    showToast('Failed: ' + String(e), 'error');
+  } finally {
+    setUploading(false);
+  }
+}}
             />
           )}
         </div>
@@ -948,43 +947,51 @@ return type === 'debit' || type === 'expense';
               uploading={uploading}
               onClose={() => { setShowAddModal(false); setEditRow(null); }}
               onSave={async (data) => {
-                try {
-                  setUploading(true);
-                  
-                  // Handle file upload to Drive if it's a base64 string
-                  if (data.Media && data.Media.startsWith('data:')) {
-                    const fileName = `notice_${Date.now()}.${data.Media.split(';')[0].split('/')[1]}`;
-                    const uploadRes = await fetch(GAS, {
-                      method: 'POST',
-                      headers: {'Content-Type': 'text/plain;charset=utf-8'},
-                      body: JSON.stringify({
-                        op: 'uploadFile',
-                        sheet: 'Notices',
-                        fileData: data.Media,
-                        fileName: fileName
-                      })
-                    });
-                    const uploadData = await uploadRes.json();
-                    if (uploadData.ok && uploadData.url) {
-                      data.Media = uploadData.url;
-                    }
-                  }
-                  
-                  if (editRow) {
-                    await api.upsertRow('Notices', 'Serial Number', { ...editRow, ...data });
-                  } else {
-                    await api.createRow('Notices', data);
-                  }
-                  await onRefresh();
-                  setShowAddModal(false);
-                  setEditRow(null);
-                  showToast('Notice saved', 'success');
-                } catch (e) {
-                  showToast('Failed: ' + String(e), 'error');
-                } finally {
-                  setUploading(false);
-                }
-              }}
+  try {
+    setUploading(true);
+    
+    // Handle file upload to Drive if it's a base64 string
+    if (data.Media && data.Media.startsWith('data:')) {
+      try {
+        const mimeMatch = data.Media.match(/data:(.*?);/);
+        const mimeType = mimeMatch ? mimeMatch[1] : 'application/pdf';
+        const ext = mimeType.split('/')[1] || 'pdf';
+        const fileName = `notice_${Date.now()}.${ext}`;
+        
+        const uploadRes = await postPlain({
+          op: 'uploadFile',
+          sheet: 'Notices',
+          fileData: data.Media,
+          fileName: fileName
+        });
+        
+        if (uploadRes.ok && uploadRes.file && uploadRes.file.url) {
+          data.Media = uploadRes.file.url;
+        } else {
+          throw new Error(uploadRes.error || 'Upload failed');
+        }
+      } catch (uploadErr) {
+        showToast('File upload failed: ' + uploadErr.message, 'error');
+        setUploading(false);
+        return;
+      }
+    }
+    
+    if (editRow) {
+      await api.upsertRow('Notices', 'Serial Number', { ...editRow, ...data });
+    } else {
+      await api.createRow('Notices', data);
+    }
+    await onRefresh();
+    setShowAddModal(false);
+    setEditRow(null);
+    showToast('Notice saved', 'success');
+  } catch (e) {
+    showToast('Failed: ' + String(e), 'error');
+  } finally {
+    setUploading(false);
+  }
+}}
             />
           )}
         </div>
@@ -1079,15 +1086,33 @@ return type === 'debit' || type === 'expense';
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                <textarea
-                  value={formData.Description}
-                  onChange={e => setFormData({...formData, Description: e.target.value})}
-                  rows="4"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                />
-              </div>
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">Attach File</label>
+  <input
+    type="file"
+    accept="image/*,application/pdf"
+    onChange={e => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = () => setFormData({...formData, Media: reader.result});
+        reader.readAsDataURL(file);
+      }
+    }}
+    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+  />
+  {formData.Media && (
+    <div className="mt-3">
+      {formData.Media.startsWith('data:image') ? (
+        <img src={formData.Media} alt="Preview" className="max-w-xs h-auto rounded-lg border" />
+      ) : formData.Media.match(/\.(jpg|jpeg|png|gif)$/i) ? (
+        <img src={formData.Media} alt="Preview" className="max-w-xs h-auto rounded-lg border" />
+      ) : (
+        <p className="text-sm text-gray-600">📎 File attached</p>
+      )}
+    </div>
+  )}
+</div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Attach File</label>
                 <input
@@ -1131,6 +1156,8 @@ return type === 'debit' || type === 'expense';
       const [search, setSearch] = useState('');
       const [editRow, setEditRow] = useState(null);
       const [viewRow, setViewRow] = useState(null);
+      const [showAddModal, setShowAddModal] = useState(false);
+      const [uploading, setUploading] = useState(false);
 
       const stats = useMemo(() => {
         const open = data.filter(i => (i.Status || 'Open').toLowerCase() === 'open').length;
@@ -1175,14 +1202,25 @@ return type === 'debit' || type === 'expense';
           <div className="bg-white rounded-2xl shadow-sm">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">Issues ({filtered.length})</h2>
-                <input
-                  type="text"
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  placeholder="Search..."
-                  className="px-4 py-2 border border-gray-300 rounded-lg"
-                />
+<h2 className="text-xl font-semibold text-gray-900">Issues ({filtered.length})</h2>
+<div className="flex items-center gap-3">
+  <input
+    type="text"
+    value={search}
+    onChange={e => setSearch(e.target.value)}
+    placeholder="Search..."
+    className="px-4 py-2 border border-gray-300 rounded-lg"
+  />
+  <button
+    onClick={() => setShowAddModal(true)}
+    className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center gap-2"
+  >
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+    </svg>
+    Report Issue
+  </button>
+</div>
               </div>
             </div>
 
@@ -1263,9 +1301,180 @@ return type === 'debit' || type === 'expense';
     }}
   />
 )}
+{showAddModal && (
+  <AddIssueModal
+    data={data}
+    uploading={uploading}
+    onClose={() => setShowAddModal(false)}
+    onSave={async (issueData) => {
+      try {
+        setUploading(true);
+        
+        // Handle media upload to Drive if it's a base64 string
+        if (issueData['Media URL'] && issueData['Media URL'].startsWith('data:')) {
+          try {
+            const mimeMatch = issueData['Media URL'].match(/data:(.*?);/);
+            const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+            const ext = mimeType.split('/')[1] || 'jpg';
+            const fileName = `issue_${Date.now()}.${ext}`;
+            
+            const uploadRes = await postPlain({
+              op: 'uploadFile',
+              sheet: 'Issues',
+              fileData: issueData['Media URL'],
+              fileName: fileName
+            });
+            
+            if (uploadRes.ok && uploadRes.file && uploadRes.file.url) {
+              issueData['Media URL'] = uploadRes.file.url;
+            } else {
+              throw new Error(uploadRes.error || 'Upload failed');
+            }
+          } catch (uploadErr) {
+            showToast('Media upload failed: ' + uploadErr.message, 'error');
+            setUploading(false);
+            return;
+          }
+        }
+        
+        await api.createRow('Issues', issueData);
+        await onRefresh();
+        setShowAddModal(false);
+        showToast('Issue reported successfully', 'success');
+      } catch (e) {
+        showToast('Failed: ' + String(e), 'error');
+      } finally {
+        setUploading(false);
+      }
+    }}
+  />
+)}
 </div>
 );
 } // <-- close IssuesPage here
+
+function AddIssueModal({ data, uploading, onClose, onSave }) {
+  const nextTrackingId = useMemo(() => {
+    if (!data || data.length === 0) return 1001;
+    const ids = data.map(d => Number(d['Tracking ID']) || 0);
+    return Math.max(...ids) + 1;
+  }, [data]);
+
+  const [formData, setFormData] = useState({
+    'Tracking ID': nextTrackingId,
+    'Date and Time Raised': new Date().toISOString().replace('T', ' ').substring(0, 19),
+    Tower: '',
+    Flat: '',
+    Issue: '',
+    Description: '',
+    'Media URL': '',
+    Status: 'Open'
+  });
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="p-6 border-b border-gray-200">
+          <h3 className="text-xl font-semibold">Report New Issue</h3>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-sm text-blue-800">Tracking ID: <span className="font-bold">#{nextTrackingId}</span></p>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Tower *</label>
+              <input
+                type="text"
+                value={formData.Tower}
+                onChange={e => setFormData({...formData, Tower: e.target.value})}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Flat *</label>
+              <input
+                type="text"
+                value={formData.Flat}
+                onChange={e => setFormData({...formData, Flat: e.target.value})}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Issue *</label>
+            <input
+              type="text"
+              value={formData.Issue}
+              onChange={e => setFormData({...formData, Issue: e.target.value})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
+            <textarea
+              value={formData.Description}
+              onChange={e => setFormData({...formData, Description: e.target.value})}
+              rows="4"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Photo/Video</label>
+            <input
+              type="file"
+              accept="image/*,video/*"
+              capture="environment"
+              onChange={e => {
+                const file = e.target.files[0];
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onload = () => setFormData({...formData, 'Media URL': reader.result});
+                  reader.readAsDataURL(file);
+                }
+              }}
+              className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+            {formData['Media URL'] && (
+              <div className="mt-2">
+                {formData['Media URL'].startsWith('data:image') ? (
+                  <img src={formData['Media URL']} alt="Preview" className="w-32 h-32 rounded-lg object-cover" />
+                ) : (
+                  <p className="text-sm text-green-600">✓ Media attached</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            disabled={uploading}
+            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onSave(formData)}
+            disabled={uploading || !formData.Tower || !formData.Flat || !formData.Issue || !formData.Description}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
+          >
+            {uploading && <div className="spinner" style={{width: '16px', height: '16px', borderWidth: '2px'}} />}
+            {uploading ? 'Submitting...' : 'Submit Issue'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function IssueViewModal({ row, onClose }) {
   const columns = Object.keys(row);
@@ -1517,24 +1726,32 @@ return type === 'debit' || type === 'expense';
                 try {
                   setUploading(true);
                   
-                  // Handle attachment upload to Drive if it's a base64 string
-                  if (data.Attachment && data.Attachment.startsWith('data:')) {
-                    const fileName = `transaction_${Date.now()}.${data.Attachment.split(';')[0].split('/')[1]}`;
-                    const uploadRes = await fetch(GAS, {
-                      method: 'POST',
-                      headers: {'Content-Type': 'text/plain;charset=utf-8'},
-                      body: JSON.stringify({
-                        op: 'uploadFile',
-                        sheet: 'Transactions',
-                        fileData: data.Attachment,
-                        fileName: fileName
-                      })
-                    });
-                    const uploadData = await uploadRes.json();
-                    if (uploadData.ok && uploadData.url) {
-                      data.Attachment = uploadData.url;
-                    }
-                  }
+// Handle attachment upload to Drive if it's a base64 string
+if (data.Attachment && data.Attachment.startsWith('data:')) {
+  try {
+    const mimeMatch = data.Attachment.match(/data:(.*?);/);
+    const mimeType = mimeMatch ? mimeMatch[1] : 'application/pdf';
+    const ext = mimeType.split('/')[1] || 'pdf';
+    const fileName = `transaction_${Date.now()}.${ext}`;
+    
+    const uploadRes = await postPlain({
+      op: 'uploadFile',
+      sheet: 'Transactions',
+      fileData: data.Attachment,
+      fileName: fileName
+    });
+    
+    if (uploadRes.ok && uploadRes.file && uploadRes.file.url) {
+      data.Attachment = uploadRes.file.url;
+    } else {
+      throw new Error(uploadRes.error || 'Upload failed');
+    }
+  } catch (uploadErr) {
+    showToast('Attachment upload failed: ' + uploadErr.message, 'error');
+    setUploading(false);
+    return;
+  }
+}
                   
                   if (editRow) {
                     await api.upsertRow('Transactions', 'Transaction ID', { ...editRow, ...data });
@@ -1807,24 +2024,32 @@ return type === 'debit' || type === 'expense';
                 try {
                   setUploading(true);
                   
-                  // Handle file upload to Drive if it's a base64 string
-                  if (data.Media && data.Media.startsWith('data:')) {
-                    const fileName = `document_${Date.now()}.${data.Media.split(';')[0].split('/')[1]}`;
-                    const uploadRes = await fetch(GAS, {
-                      method: 'POST',
-                      headers: {'Content-Type': 'text/plain;charset=utf-8'},
-                      body: JSON.stringify({
-                        op: 'uploadFile',
-                        sheet: 'Documents',
-                        fileData: data.Media,
-                        fileName: fileName
-                      })
-                    });
-                    const uploadData = await uploadRes.json();
-                    if (uploadData.ok && uploadData.url) {
-                      data.Media = uploadData.url;
-                    }
-                  }
+// Handle file upload to Drive if it's a base64 string
+if (data.Media && data.Media.startsWith('data:')) {
+  try {
+    const mimeMatch = data.Media.match(/data:(.*?);/);
+    const mimeType = mimeMatch ? mimeMatch[1] : 'application/pdf';
+    const ext = mimeType.split('/')[1] || 'pdf';
+    const fileName = `document_${Date.now()}.${ext}`;
+    
+    const uploadRes = await postPlain({
+      op: 'uploadFile',
+      sheet: 'Documents',
+      fileData: data.Media,
+      fileName: fileName
+    });
+    
+    if (uploadRes.ok && uploadRes.file && uploadRes.file.url) {
+      data.Media = uploadRes.file.url;
+    } else {
+      throw new Error(uploadRes.error || 'Upload failed');
+    }
+  } catch (uploadErr) {
+    showToast('Document upload failed: ' + uploadErr.message, 'error');
+    setUploading(false);
+    return;
+  }
+}
                   
                   await api.createRow('Documents', data);
                   await onRefresh();
