@@ -196,6 +196,28 @@ async function postPlain(body){
       }
     };
 
+    // Upload a single field if it contains a data: URL. Returns the same object with URL swapped in.
+async function maybeUploadField(obj, sheet, field, namePrefix = field.toLowerCase()) {
+  const val = obj[field];
+  if (!val || typeof val !== 'string' || !val.startsWith('data:')) return obj;
+
+  const mimeMatch = val.match(/data:([^;]+)(;base64)?/);
+  const mime = (mimeMatch && mimeMatch[1]) || 'application/octet-stream';
+  const ext  = (mime.split('/')[1] || 'bin').replace('+xml','');
+
+  const res = await postPlain({
+    op: 'uploadFile',
+    sheet,                    // must match a key in DRIVE_FOLDERS
+    fileName: `${namePrefix}_${Date.now()}.${ext}`,
+    fileData: val             // full data URL
+  });
+
+  if (!res.ok) throw new Error(res.error || 'Upload failed');
+  obj[field] = res.file.url;  // replace base64 with Drive URL
+  return obj;
+}
+
+
     function showToast(message, type='info') {
       const toastContainer = document.getElementById('toast-container') || (() => {
         const div = document.createElement('div');
@@ -648,39 +670,15 @@ return type === 'debit' || type === 'expense';
               onSave={async (data) => {
   try {
     setUploading(true);
-    
-    // Handle photo upload to Drive if it's a base64 string
-    if (data.Photo && data.Photo.startsWith('data:')) {
-      try {
-        const mimeMatch = data.Photo.match(/data:(.*?);/);
-        const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-        const ext = mimeType.split('/')[1] || 'jpg';
-        const fileName = `photo_${Date.now()}.${ext}`;
-        
-        const uploadRes = await postPlain({
-          op: 'uploadFile',
-          sheet: 'Directory',
-          fileData: data.Photo,
-          fileName: fileName
-        });
-        
-        if (uploadRes.ok && uploadRes.file && uploadRes.file.url) {
-          data.Photo = uploadRes.file.url;
-        } else {
-          throw new Error(uploadRes.error || 'Upload failed');
-        }
-      } catch (uploadErr) {
-        showToast('Photo upload failed: ' + uploadErr.message, 'error');
-        setUploading(false);
-        return;
-      }
-    }
-    
+
+    await maybeUploadField(data, 'Directory', 'Photo', 'photo');
+
     if (editRow) {
       await api.upsertRow('Directory', 'Serial', { ...editRow, ...data });
     } else {
       await api.createRow('Directory', data);
     }
+
     await onRefresh();
     setShowAddModal(false);
     setEditRow(null);
@@ -691,6 +689,7 @@ return type === 'debit' || type === 'expense';
     setUploading(false);
   }
 }}
+
             />
           )}
         </div>
@@ -950,39 +949,15 @@ return type === 'debit' || type === 'expense';
               onSave={async (data) => {
   try {
     setUploading(true);
-    
-    // Handle file upload to Drive if it's a base64 string
-    if (data.Media && data.Media.startsWith('data:')) {
-      try {
-        const mimeMatch = data.Media.match(/data:(.*?);/);
-        const mimeType = mimeMatch ? mimeMatch[1] : 'application/pdf';
-        const ext = mimeType.split('/')[1] || 'pdf';
-        const fileName = `notice_${Date.now()}.${ext}`;
-        
-        const uploadRes = await postPlain({
-          op: 'uploadFile',
-          sheet: 'Notices',
-          fileData: data.Media,
-          fileName: fileName
-        });
-        
-        if (uploadRes.ok && uploadRes.file && uploadRes.file.url) {
-          data.Media = uploadRes.file.url;
-        } else {
-          throw new Error(uploadRes.error || 'Upload failed');
-        }
-      } catch (uploadErr) {
-        showToast('File upload failed: ' + uploadErr.message, 'error');
-        setUploading(false);
-        return;
-      }
-    }
-    
+
+    await maybeUploadField(data, 'Notices', 'Media', 'notice');
+
     if (editRow) {
       await api.upsertRow('Notices', 'Serial Number', { ...editRow, ...data });
     } else {
       await api.createRow('Notices', data);
     }
+
     await onRefresh();
     setShowAddModal(false);
     setEditRow(null);
@@ -993,6 +968,7 @@ return type === 'debit' || type === 'expense';
     setUploading(false);
   }
 }}
+
             />
           )}
         </div>
@@ -1265,23 +1241,23 @@ return type === 'debit' || type === 'expense';
     row={editRow}
     onClose={() => setEditRow(null)}
     onSave={async (data) => {
-      try {
-        // Combine all original data with updates
-        const fullUpdate = {
-          'Tracking ID': editRow['Tracking ID'],
-          Status: data.Status,
-          'Redressal Remark': data['Redressal Remark']
-        };
-        
-        await api.upsertRow('Issues', 'Tracking ID', fullUpdate);
-        await onRefresh();
-        setEditRow(null);
-        showToast('Updated successfully', 'success');
-      } catch (e) {
-        console.error('Update error:', e);
-        showToast('Failed to update: ' + String(e.message || e), 'error');
-      }
-    }}
+  try {
+    const fullUpdate = {
+      'Tracking ID': editRow['Tracking ID'],
+      Status: data.Status,
+      'Redressal Remark': data['Redressal Remark'],
+    };
+
+    await api.upsertRow('Issues', 'Tracking ID', fullUpdate);
+    await onRefresh();
+    setEditRow(null);
+    showToast('Updated successfully', 'success');
+  } catch (e) {
+    console.error('Update error:', e);
+    showToast('Failed to update: ' + String(e.message || e), 'error');
+  }
+}}
+
   />
 )}
 {showAddModal && (
@@ -1289,47 +1265,23 @@ return type === 'debit' || type === 'expense';
     data={data}
     uploading={uploading}
     onClose={() => setShowAddModal(false)}
-    onSave={async (issueData) => {
-      try {
-        setUploading(true);
-        
-        // Handle media upload to Drive if it's a base64 string
-        if (issueData['Media URL'] && issueData['Media URL'].startsWith('data:')) {
-          try {
-            const mimeMatch = issueData['Media URL'].match(/data:(.*?);/);
-            const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-            const ext = mimeType.split('/')[1] || 'jpg';
-            const fileName = `issue_${Date.now()}.${ext}`;
-            
-            const uploadRes = await postPlain({
-              op: 'uploadFile',
-              sheet: 'Issues',
-              fileData: issueData['Media URL'],
-              fileName: fileName
-            });
-            
-            if (uploadRes.ok && uploadRes.file && uploadRes.file.url) {
-              issueData['Media URL'] = uploadRes.file.url;
-            } else {
-              throw new Error(uploadRes.error || 'Upload failed');
-            }
-          } catch (uploadErr) {
-            showToast('Media upload failed: ' + uploadErr.message, 'error');
-            setUploading(false);
-            return;
-          }
-        }
-        
-        await api.createRow('Issues', issueData);
-        await onRefresh();
-        setShowAddModal(false);
-        showToast('Issue reported successfully', 'success');
-      } catch (e) {
-        showToast('Failed: ' + String(e), 'error');
-      } finally {
-        setUploading(false);
-      }
-    }}
+onSave={async (issueData) => {
+  try {
+    setUploading(true);
+
+    // ✅ simplified helper-based upload
+    await maybeUploadField(issueData, 'Issues', 'Media URL', 'issue');
+
+    await api.createRow('Issues', issueData);
+    await onRefresh();
+    setShowAddModal(false);
+    showToast('Issue reported successfully', 'success');
+  } catch (e) {
+    showToast('Failed: ' + String(e), 'error');
+  } finally {
+    setUploading(false);
+  }
+}}
   />
 )}
 </div>
@@ -1709,38 +1661,14 @@ return type === 'debit' || type === 'expense';
                 try {
                   setUploading(true);
                   
-// Handle attachment upload to Drive if it's a base64 string
-if (data.Attachment && data.Attachment.startsWith('data:')) {
-  try {
-    const mimeMatch = data.Attachment.match(/data:(.*?);/);
-    const mimeType = mimeMatch ? mimeMatch[1] : 'application/pdf';
-    const ext = mimeType.split('/')[1] || 'pdf';
-    const fileName = `transaction_${Date.now()}.${ext}`;
-    
-    const uploadRes = await postPlain({
-      op: 'uploadFile',
-      sheet: 'Transactions',
-      fileData: data.Attachment,
-      fileName: fileName
-    });
-    
-    if (uploadRes.ok && uploadRes.file && uploadRes.file.url) {
-      data.Attachment = uploadRes.file.url;
-    } else {
-      throw new Error(uploadRes.error || 'Upload failed');
-    }
-  } catch (uploadErr) {
-    showToast('Attachment upload failed: ' + uploadErr.message, 'error');
-    setUploading(false);
-    return;
-  }
+await maybeUploadField(data, 'Transactions', 'Attachment', 'txn');
+
+if (editRow) {
+  await api.upsertRow('Transactions', 'Transaction ID', { ...editRow, ...data });
+} else {
+  await api.createRow('Transactions', data);
 }
-                  
-                  if (editRow) {
-                    await api.upsertRow('Transactions', 'Transaction ID', { ...editRow, ...data });
-                  } else {
-                    await api.createRow('Transactions', data);
-                  }
+
                   await onRefresh();
                   setShowAddModal(false);
                   setEditRow(null);
@@ -2007,33 +1935,8 @@ if (data.Attachment && data.Attachment.startsWith('data:')) {
                 try {
                   setUploading(true);
                   
-// Handle file upload to Drive if it's a base64 string
-if (data.Media && data.Media.startsWith('data:')) {
-  try {
-    const mimeMatch = data.Media.match(/data:(.*?);/);
-    const mimeType = mimeMatch ? mimeMatch[1] : 'application/pdf';
-    const ext = mimeType.split('/')[1] || 'pdf';
-    const fileName = `document_${Date.now()}.${ext}`;
-    
-    const uploadRes = await postPlain({
-      op: 'uploadFile',
-      sheet: 'Documents',
-      fileData: data.Media,
-      fileName: fileName
-    });
-    
-    if (uploadRes.ok && uploadRes.file && uploadRes.file.url) {
-      data.Media = uploadRes.file.url;
-    } else {
-      throw new Error(uploadRes.error || 'Upload failed');
-    }
-  } catch (uploadErr) {
-    showToast('Document upload failed: ' + uploadErr.message, 'error');
-    setUploading(false);
-    return;
-  }
-}
-                  
+
+await maybeUploadField(data, 'Documents', 'Media', 'doc');                  
                   await api.createRow('Documents', data);
                   await onRefresh();
                   setShowAddModal(false);
@@ -2324,38 +2227,14 @@ function TenantsPage({ data, isAdmin, onRefresh }) {
             try {
               setUploading(true);
               
-              // Handle file upload to Drive if it's a base64 string
-              if (data.Attachments && data.Attachments.startsWith('data:')) {
-                try {
-                  const mimeMatch = data.Attachments.match(/data:(.*?);/);
-                  const mimeType = mimeMatch ? mimeMatch[1] : 'application/pdf';
-                  const ext = mimeType.split('/')[1] || 'pdf';
-                  const fileName = `tenant_${data['Tenant Name']}_${Date.now()}.${ext}`;
-                  
-                  const uploadRes = await postPlain({
-                    op: 'uploadFile',
-                    sheet: 'Tenants',
-                    fileData: data.Attachments,
-                    fileName: fileName
-                  });
-                  
-                  if (uploadRes.ok && uploadRes.file && uploadRes.file.url) {
-                    data.Attachments = uploadRes.file.url;
-                  } else {
-                    throw new Error(uploadRes.error || 'Upload failed');
-                  }
-                } catch (uploadErr) {
-                  showToast('File upload failed: ' + uploadErr.message, 'error');
-                  setUploading(false);
-                  return;
-                }
-              }
-              
-              if (editRow) {
-                await api.upsertRow('Tenants', 'Tenant Name', { ...editRow, ...data });
-              } else {
-                await api.createRow('Tenants', data);
-              }
+              await maybeUploadField(data, 'Tenants', 'Attachments', 'tenant');
+
+if (editRow) {
+  await api.upsertRow('Tenants', 'Tenant Name', { ...editRow, ...data });
+} else {
+  await api.createRow('Tenants', data);
+}
+
               await onRefresh();
               setShowAddModal(false);
               setEditRow(null);
