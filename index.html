@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Global Hillview – Society Portal</title>
+  <title>Global Hillview – Society Portal (CORS-Integrated)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -16,48 +16,23 @@
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Inter', sans-serif; }
-    
-    .spinner {
-      border: 3px solid #f3f4f6;
-      border-top: 3px solid #3b82f6;
-      border-radius: 50%;
-      width: 24px;
-      height: 24px;
-      animation: spin 0.8s linear infinite;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    
-    .card-hover {
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      cursor: pointer;
-    }
-    .card-hover:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-    }
-    
-    .nav-item {
-      transition: all 0.2s ease;
-      border-left: 3px solid transparent;
-    }
-    .nav-item:hover {
-      background: rgba(59, 130, 246, 0.05);
-      border-left-color: #3b82f6;
-    }
-    .nav-item.active {
-      background: rgba(59, 130, 246, 0.1);
-      border-left-color: #3b82f6;
-      font-weight: 600;
-    }
-    
+    .spinner { border: 3px solid #f3f4f6; border-top: 3px solid #3b82f6; border-radius: 50%; width: 24px; height: 24px; animation: spin 0.8s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .card-hover { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; }
+    .card-hover:hover { transform: translateY(-2px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+    .nav-item { transition: all 0.2s ease; border-left: 3px solid transparent; }
+    .nav-item:hover { background: rgba(59, 130, 246, 0.05); border-left-color: #3b82f6; }
+    .nav-item.active { background: rgba(59, 130, 246, 0.1); border-left-color: #3b82f6; font-weight: 600; }
     .fade-in { animation: fadeIn 0.3s ease-in; }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .status-badge { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: 500; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; animation: fadeIn 0.2s ease; }
+    .modal-content { background: white; border-radius: 16px; max-width: 800px; width: 90%; max-height: 90vh; overflow-y: auto; }
+    input, textarea, select { transition: all 0.2s ease; }
+    input:focus, textarea:focus, select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+    .filter-btn { transition: all 0.2s ease; }
+    .filter-btn.active { background: #3b82f6; color: white; }
   </style>
 </head>
 <body class="bg-gray-50">
@@ -71,17 +46,14 @@
   </div>
 
   <script type="text/babel">
-    const { useEffect, useState, useMemo } = React;
-    
-    // ✅ Verify GAS URL is set
-    const GAS = window.ENV_GAS_URL;
+    const { useEffect, useState, useMemo, useRef } = React;
+
+    // ✅ GAS URL (supports ?gas= override)
+    const qs = new URLSearchParams(location.search);
+    const GAS = qs.get('gas') || window.ENV_GAS_URL || '';
     console.log('🔗 Using GAS URL:', GAS);
 
-    if (!GAS) {
-      console.error('❌ GAS URL not configured!');
-    }
-
-    // Helper for Drive direct links
+    // ---------- Shared Helpers (CORS-safe) ----------
     function driveDirectLink(url, size = 100) {
       if (!url) return "";
       const match1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
@@ -90,20 +62,17 @@
       return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w${size}` : url;
     }
 
-    // API Functions with CORS fallback
     async function fetchWithTimeout(url, opts = {}, ms = 12000) {
       const ctl = new AbortController();
       const id = setTimeout(() => ctl.abort(), ms);
       try {
         return await fetch(url, { ...opts, signal: ctl.signal });
-      } finally {
-        clearTimeout(id);
-      }
+      } finally { clearTimeout(id); }
     }
 
+    // ✅ GET with JSONP fallback
     async function getJSON(action, extra = {}) {
       if (!GAS) throw new Error('Backend not configured');
-      
       const u = new URL(GAS);
       u.searchParams.set('action', action);
       for (const [k, v] of Object.entries(extra)) u.searchParams.set(k, v);
@@ -114,8 +83,6 @@
         return r.json();
       } catch (corsError) {
         console.log('⚠️ CORS failed, trying JSONP fallback...', corsError);
-        
-        // JSONP fallback
         return new Promise((resolve, reject) => {
           const callbackName = 'jsonp_' + Date.now();
           window[callbackName] = (data) => {
@@ -123,13 +90,11 @@
             document.body.removeChild(script);
             resolve(data);
           };
-
           const script = document.createElement('script');
           u.searchParams.set('callback', callbackName);
           script.src = u.toString();
           script.onerror = () => reject(new Error('JSONP request failed'));
           document.body.appendChild(script);
-
           setTimeout(() => {
             if (window[callbackName]) {
               delete window[callbackName];
@@ -152,17 +117,43 @@
       return r.json();
     }
 
+    // 🔧 Upload utility for data: URLs
+    async function maybeUploadField(obj, sheet, field, namePrefix = field.toLowerCase()) {
+      const val = obj[field];
+      if (!val || typeof val !== 'string' || !val.startsWith('data:')) return obj;
+      const mimeMatch = val.match(/data:([^;]+)(;base64)?/);
+      const mime = (mimeMatch && mimeMatch[1]) || 'application/octet-stream';
+      const ext  = (mime.split('/')[1] || 'bin').replace('+xml','');
+      const res = await postPlain({ op: 'uploadFile', sheet, fileName: `${namePrefix}_${Date.now()}.${ext}`, fileData: val });
+      if (!res.ok) throw new Error(res.error || 'Upload failed');
+      obj[field] = res.file.url;
+      return obj;
+    }
+
+    // 🔔 Toasts
+    function showToast(message, type='info') {
+      const toastContainer = document.getElementById('toast-container') || (() => {
+        const div = document.createElement('div');
+        div.id = 'toast-container';
+        div.className = 'fixed top-4 right-4 z-50 flex flex-col gap-2';
+        document.body.appendChild(div);
+        return div;
+      })();
+      const toast = document.createElement('div');
+      const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
+      toast.className = `${bgColor} text-white px-6 py-3 rounded-lg shadow-lg fade-in`;
+      toast.textContent = message;
+      toastContainer.appendChild(toast);
+      setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
+    }
+
+    // 🔗 API (reused by the whole app)
     const api = {
       async login(u, p) {
-        try {
-          return await postPlain({ op: 'login', username: u, password: p });
-        } catch {
-          return getJSON('login', { u, p });
-        }
+        try { return await postPlain({ op: 'login', username: u, password: p }); }
+        catch { return getJSON('login', { u, p }); }
       },
-      async sessionInfo(token) {
-        return postPlain({ op: 'sessionInfo', token });
-      },
+      async sessionInfo(token) { return postPlain({ op: 'sessionInfo', token }); },
       list: {
         Directory: () => getJSON('listDirectory'),
         Notices: () => getJSON('listNotices'),
@@ -170,46 +161,33 @@
         Transactions: () => getJSON('listTransactions'),
         Documents: () => getJSON('listDocuments'),
         Voters: () => getJSON('listVoters'),
+        OpeningBalances: () => getJSON('listOpeningBalances').catch(() => ({rows:[]})),
+        ChartOfAccounts: () => getJSON('listChartOfAccounts').catch(() => ({rows:[]})),
         Tenants: () => getJSON('listTenants')
-      }
+      },
+      async upsertRow(sheet, key, row) { return postPlain({ op:'upsertRow', sheet, key, row }); },
+      async createRow(sheet, row) { return postPlain({ op:'createRow', sheet, row }); }
     };
 
+    // ---------- UI: Login (used inside App) ----------
     function LoginScreen({ onSuccess }) {
       const [username, setUsername] = useState('');
       const [password, setPassword] = useState('');
       const [error, setError] = useState('');
       const [loading, setLoading] = useState(false);
-
       async function handleLogin(e) {
-        e.preventDefault();
-        setLoading(true);
-        setError('');
-        
+        e.preventDefault(); setLoading(true); setError('');
         try {
-          console.log('🔐 Attempting login...');
           const r = await api.login(username, password);
-          console.log('📥 Login response:', r);
-          
           if (r?.ok && r?.token) {
             localStorage.setItem('session', r.token);
-            onSuccess({
-              token: r.token,
-              role: (r.role || 'user').toLowerCase(),
-              username: r.username || username
-            });
-          } else {
-            setError(r?.error || 'Invalid credentials');
-          }
-        } catch (e) {
-          console.error('❌ Login error:', e);
-          setError(String(e));
-        } finally {
-          setLoading(false);
-        }
+            onSuccess({ token: r.token, role: (r.role || 'user').toLowerCase(), username: r.username || username });
+            showToast('Welcome back!', 'success');
+          } else setError(r?.error || 'Invalid credentials');
+        } catch (e) { setError(String(e)); } finally { setLoading(false); }
       }
-
       return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-4">
+        <div className="min-h-screen gradient-bg flex items-center justify-center p-4">
           <div className="w-full max-w-md">
             <div className="bg-white rounded-2xl shadow-2xl p-8 fade-in">
               <div className="text-center mb-8">
@@ -221,136 +199,270 @@
                 <h1 className="text-2xl font-bold text-gray-900">Global Hillview</h1>
                 <p className="text-gray-600 mt-2">Society Management Portal</p>
               </div>
-
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
-                  <input
-                    type="text"
-                    value={username}
-                    onChange={e => setUsername(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter your username"
-                    required
-                    autoFocus
-                  />
+                  <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg" placeholder="Enter your username" required autoFocus />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter your password"
-                    required
-                  />
+                  <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg" placeholder="Enter your password" required />
                 </div>
-
-                {error && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                    {error}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {loading && <div className="spinner" style={{width: '16px', height: '16px', borderWidth: '2px'}} />}
+                {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>}
+                <button type="submit" disabled={loading} className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                  {loading && <div className="spinner" />}
                   {loading ? 'Signing in...' : 'Sign In'}
                 </button>
-
-                <button
-                  type="button"
-                  onClick={() => { setUsername('demo'); setPassword('demo'); }}
-                  className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 rounded-lg transition-colors"
-                >
-                  Use Demo Account
-                </button>
+                <button type="button" onClick={() => { setUsername('demo'); setPassword('demo'); }} className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 rounded-lg transition-colors">Use Demo Account</button>
               </form>
-
-              <div className="mt-6 text-center text-xs text-gray-500">
-                <p>Backend: {GAS ? '✅ Connected' : '❌ Not configured'}</p>
-              </div>
             </div>
           </div>
         </div>
       );
     }
 
-    function SimpleTest() {
-      const [status, setStatus] = useState('Testing connection...');
-      const [result, setResult] = useState(null);
-      const [error, setError] = useState(null);
+    // ---------- Pages & Components (excerpt from production) ----------
+    const INR = new Intl.NumberFormat('en-IN', { style:'currency', currency:'INR', maximumFractionDigits:0 });
 
-      useEffect(() => {
-        async function test() {
-          try {
-            console.log('🧪 Testing connection to:', GAS);
-            const data = await getJSON('testCors');
-            console.log('✅ Test successful:', data);
-            setResult(data);
-            setStatus('Connection successful!');
-          } catch (e) {
-            console.error('❌ Test failed:', e);
-            setError(String(e));
-            setStatus('Connection failed');
-          }
-        }
-        test();
-      }, []);
-
-      if (error) {
-        return (
-          <div className="min-h-screen bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-red-100 rounded-full mx-auto mb-4 flex items-center justify-center">
-                  <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-2">{status}</h2>
-                <p className="text-sm text-gray-600 mb-4">Unable to connect to backend</p>
-              </div>
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-                <p className="text-sm text-red-800 font-mono break-all">{error}</p>
-              </div>
-              <button
-                onClick={() => window.location.reload()}
-                className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 rounded-lg transition-colors"
-              >
-                Retry Connection
-              </button>
+    function Dashboard({ data, onNavigate, isAdmin }) {
+      const stats = useMemo(() => {
+        const openIssues = data.Issues.filter(i => (i.Status || '').toLowerCase() !== 'resolved').length;
+        const totalEnviroStaff = data.Directory.length;
+        const collected = data.Transactions.filter(t => (t.Type || '').toLowerCase() === 'credit').reduce((s, t) => s + Number(t.Amount || 0), 0);
+        const expenses = data.Transactions.filter(t => { const type = (t.Type || '').toLowerCase().trim(); return type === 'debit' || type === 'expense'; }).reduce((s, t) => s + Number(t.Amount || 0), 0);
+        return { openIssues, totalEnviroStaff, collected, expenses };
+      }, [data]);
+      return (
+        <div className="space-y-6 fade-in">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div onClick={() => onNavigate('Directory')} className="bg-white rounded-2xl p-6 shadow-sm card-hover">
+              <div className="flex items-center justify-between"><div><p className="text-gray-600 text-sm font-medium">Total Enviro Staff</p><p className="text-3xl font-bold text-gray-900 mt-2">{stats.totalEnviroStaff}</p></div><div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center"><svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg></div></div>
+            </div>
+            <div onClick={() => onNavigate('Issues')} className="bg-white rounded-2xl p-6 shadow-sm card-hover">
+              <div className="flex items-center justify-between"><div><p className="text-gray-600 text-sm font-medium">Open Issues</p><p className="text-3xl font-bold text-gray-900 mt-2">{stats.openIssues}</p></div><div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center"><svg className="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg></div></div>
+            </div>
+            <div onClick={() => onNavigate('Transactions')} className="bg-white rounded-2xl p-6 shadow-sm card-hover">
+              <div className="flex items-center justify-between"><div><p className="text-gray-600 text-sm font-medium">Collected</p><p className="text-3xl font-bold text-green-600 mt-2">{INR.format(stats.collected)}</p></div><div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center"><svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div></div>
+            </div>
+            <div onClick={() => onNavigate('Transactions')} className="bg-white rounded-2xl p-6 shadow-sm card-hover">
+              <div className="flex items-center justify-between"><div><p className="text-gray-600 text-sm font-medium">Expenses</p><p className="text-3xl font-bold text-red-600 mt-2">{INR.format(stats.expenses)}</p></div><div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center"><svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg></div></div>
             </div>
           </div>
-        );
-      }
-
-      if (!result) {
-        return (
-          <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center">
-              <div className="spinner mx-auto mb-4"></div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">{status}</h2>
-              <p className="text-gray-600 text-sm">Please wait...</p>
-            </div>
-          </div>
-        );
-      }
-
-      return <LoginScreen onSuccess={(session) => {
-        console.log('✅ Login successful:', session);
-        alert('Login successful! Full app would load here.');
-      }} />;
+        </div>
+      );
     }
 
-    // Render the app
+    // (For brevity in this integrated sample, the rest of the Production pages are included as needed)
+    // DirectoryPage, DirectoryModal, NoticesPage, NoticeModal, IssuesPage, IssueModal, AddIssueModal,
+    // Transaction pages, Documents, Tenants, GenericTable, etc. are condensed here to keep the file size reasonable.
+    // 👉 In your actual project, keep the full components from Production.html unchanged. They will work with the CORS-safe helpers above.
+
+    // ---------- Minimal versions of a few pages to keep this demo self-contained ----------
+    function GenericTable({ title, data }) {
+      const [search, setSearch] = useState('');
+      const filtered = useMemo(() => {
+        if (!search.trim()) return data; const q = search.toLowerCase();
+        return data.filter(r => Object.values(r).some(v => String(v).toLowerCase().includes(q)));
+      }, [data, search]);
+      const columns = useMemo(() => data.length ? Object.keys(data[0]) : [], [data]);
+      return (
+        <div className="bg-white rounded-2xl shadow-sm fade-in">
+          <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-900">{title} ({filtered.length})</h2>
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search..." className="px-4 py-2 border border-gray-300 rounded-lg"/>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50"><tr>{columns.map(c=> <th key={c} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{c}</th>)}</tr></thead>
+              <tbody className="divide-y divide-gray-200">
+                {filtered.map((row,i)=> (
+                  <tr key={i} className="hover:bg-gray-50">{columns.map(c=> <td key={c} className="px-4 py-3 text-sm">{String(row[c]||'')}</td>)}</tr>
+                ))}
+              </tbody>
+            </table>
+            {filtered.length===0 && <div className="text-center py-12 text-gray-500">No data found</div>}
+          </div>
+        </div>
+      );
+    }
+
+    // ---------- Main App (trimmed shell that fetches lists and shows a few pages) ----------
+    function App() {
+      const [session, setSession] = useState({ token: null, role: null, username: null });
+      const [view, setView] = useState('dashboard');
+      const [data, setData] = useState({ Directory: [], Notices: [], Issues: [], Transactions: [], Documents: [], Voters: [], OpeningBalances: [], ChartOfAccounts: [], Tenants: [] });
+      const [loading, setLoading] = useState(true);
+      const [sidebarOpen, setSidebarOpen] = useState(true);
+
+      useEffect(() => {
+        const token = qs.get('session') || localStorage.getItem('session');
+        if (token) {
+          (async () => {
+            try { const s = await api.sessionInfo(token); if (s?.ok) setSession({ token, role: (s.role||'user').toLowerCase(), username: s.username || 'user' }); else localStorage.removeItem('session'); }
+            catch (e) { console.error(e); }
+            await refreshData();
+          })();
+        } else { setLoading(false); }
+      }, []);
+
+      async function refreshData() {
+        setLoading(true);
+        try {
+          const results = await Promise.all([
+            api.list.Directory(), api.list.Notices(), api.list.Issues(), api.list.Transactions(), api.list.Documents(), api.list.Voters(), api.list.OpeningBalances(), api.list.ChartOfAccounts(), api.list.Tenants()
+          ]);
+          setData({
+            Directory: results[0]?.rows || [], Notices: results[1]?.rows || [], Issues: results[2]?.rows || [],
+            Transactions: results[3]?.rows || [], Documents: results[4]?.rows || [], Voters: results[5]?.rows || [],
+            OpeningBalances: results[6]?.rows || [], ChartOfAccounts: results[7]?.rows || [], Tenants: results[8]?.rows || []
+          });
+        } catch (e) { showToast('Failed to load data', 'error'); } finally { setLoading(false); }
+      }
+
+      if (!session.token) return <LoginScreen onSuccess={s => { setSession(s); refreshData(); }} />;
+      const isAdmin = session.role === 'admin';
+
+      const navItems = [
+        { id: 'dashboard', label: 'Dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+        { id: 'Directory', label: 'Directory', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
+        { id: 'Notices', label: 'Notices', icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9' },
+        { id: 'Issues', label: 'Issues', icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z' },
+        { id: 'Documents', label: 'Documents', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+        { id: 'Voters', label: 'Voters', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
+      ];
+      if (isAdmin) navItems.push(
+        { id: 'Transactions', label: 'Transactions', icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+        { id: 'OpeningBalances', label: 'Opening Balances', icon: 'M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z' },
+        { id: 'ChartOfAccounts', label: 'Chart of Accounts', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01' }
+      );
+
+      return (
+        <div className="min-h-screen bg-gray-50">
+          <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
+            <div className="px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between h-16">
+                <div className="flex items-center gap-4">
+                  <button onClick={() => setSidebarOpen(!sidebarOpen)} className="lg:hidden p-2 rounded-lg hover:bg-gray-100">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                  </button>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                    </div>
+                    <div>
+                      <h1 className="text-lg font-semibold text-gray-900">Global Hillview</h1>
+                      <p className="text-xs text-gray-500">Sec-11, Sohna, Gurgaon</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button onClick={refreshData} className="p-2 hover:bg-gray-100 rounded-lg" title="Refresh data">
+                    <svg className={`w-5 h-5 text-gray-600 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                  </button>
+                  <div className="flex items-center gap-3 pl-3 border-l border-gray-200">
+                    <div className="text-right hidden sm:block">
+                      <p className="text-sm font-medium text-gray-900">{session.username}</p>
+                      <p className="text-xs text-gray-500 capitalize">{session.role}</p>
+                    </div>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${session.role==='admin'?'bg-blue-500':'bg-gray-500'}`}>{session.username[0].toUpperCase()}</div>
+                    <button onClick={()=>{ if (confirm('Are you sure you want to logout?')) { localStorage.removeItem('session'); location.reload(); } }} className="p-2 hover:bg-gray-100 rounded-lg" title="Logout">
+                      <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </header>
+          <div className="flex">
+            <aside className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:sticky top-16 left-0 z-20 w-64 h-[calc(100vh-4rem)] bg-white border-r border-gray-200 transition-transform duration-300`}>
+              <nav className="p-4 space-y-1">
+                {navItems.map(item => (
+                  <button key={item.id} onClick={()=>{ setView(item.id); setSidebarOpen(false); }} className={`nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left ${view===item.id?'active':'text-gray-700 hover:text-gray-900'}`}>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={item.icon}/></svg>
+                    <span className="text-sm font-medium">{item.label}</span>
+                  </button>
+                ))}
+              </nav>
+            </aside>
+            {sidebarOpen && <div onClick={()=>setSidebarOpen(false)} className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-10 top-16" />}
+            <main className="flex-1 p-4 sm:p-6 lg:p-8">
+              {loading ? (
+                <div className="flex items-center justify-center h-64"><div className="spinner"/></div>
+              ) : view === 'dashboard' ? (
+                <Dashboard data={data} onNavigate={setView} isAdmin={isAdmin} />
+              ) : view === 'Documents' ? (
+                <GenericTable title="Documents" data={data.Documents} />
+              ) : view === 'Voters' ? (
+                <GenericTable title="Voters" data={data.Voters} />
+              ) : view === 'Directory' ? (
+                <GenericTable title="Directory" data={data.Directory} />
+              ) : view === 'Notices' ? (
+                <GenericTable title="Notices" data={data.Notices} />
+              ) : view === 'Issues' ? (
+                <GenericTable title="Issues" data={data.Issues} />
+              ) : view === 'Transactions' ? (
+                isAdmin ? <GenericTable title="Transactions" data={data.Transactions} /> : <div className="bg-white rounded-2xl shadow-sm p-8 text-center"><h3 className="text-lg font-semibold text-gray-900 mb-2">Access Restricted</h3><p className="text-gray-600">This section is only available to administrators.</p></div>
+              ) : view === 'OpeningBalances' ? (
+                isAdmin ? <GenericTable title="Opening Balances" data={data.OpeningBalances} /> : <div className="bg-white rounded-2xl shadow-sm p-8 text-center"><h3 className="text-lg font-semibold text-gray-900 mb-2">Access Restricted</h3><p className="text-gray-600">This section is only available to administrators.</p></div>
+              ) : view === 'ChartOfAccounts' ? (
+                isAdmin ? <GenericTable title="Chart of Accounts" data={data.ChartOfAccounts} /> : <div className="bg-white rounded-2xl shadow-sm p-8 text-center"><h3 className="text-lg font-semibold text-gray-900 mb-2">Access Restricted</h3><p className="text-gray-600">This section is only available to administrators.</p></div>
+              ) : (
+                <GenericTable title={view} data={data[view] || []} />
+              )}
+            </main>
+          </div>
+        </div>
+      );
+    }
+
+    // ---------- Boot: CORS Test then load App ----------
+    function Boot() {
+      const [status, setStatus] = useState('Testing connection...');
+      const [ok, setOk] = useState(false);
+      const [error, setError] = useState('');
+      useEffect(() => {
+        (async () => {
+          try {
+            console.log('🧪 testCors ->', GAS);
+            const data = await getJSON('testCors');
+            console.log('✅ testCors:', data);
+            setOk(true); setStatus('Connection successful!');
+          } catch (e) {
+            console.error('❌ Test failed:', e);
+            setError(String(e)); setStatus('Connection failed');
+          }
+        })();
+      }, []);
+      if (error) return (
+        <div className="min-h-screen bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-red-100 rounded-full mx-auto mb-4 flex items-center justify-center">
+                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              </div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">{status}</h2>
+              <p className="text-sm text-gray-600 mb-4">Unable to connect to backend</p>
+            </div>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4"><p className="text-sm text-red-800 font-mono break-all">{error}</p></div>
+            <button onClick={()=>window.location.reload()} className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 rounded-lg transition-colors">Retry Connection</button>
+          </div>
+        </div>
+      );
+      if (!ok) return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center">
+            <div className="spinner mx-auto mb-4"></div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">{status}</h2>
+            <p className="text-gray-600 text-sm">Please wait...</p>
+          </div>
+        </div>
+      );
+      return <App/>;
+    }
+
+    // Render
     const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<SimpleTest />);
+    root.render(<Boot/>);
   </script>
 </body>
 </html>
