@@ -1,29 +1,2820 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>CORS Test</title>
-</head>
-<body>
-  <button onclick="testCors()">Test CORS</button>
-  <div id="result"></div>
-  
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Global Hillview – Society Portal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script>
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbwOscN4yvXLakGTrdzuNjR_OhkkQWnTjkh8dyaP1TT_HKFu4HZWVxvPw8gPZJSluas4/exec';
+    window.ENV_GAS_URL = "https://script.google.com/macros/s/AKfycbwOscN4yvXLakGTrdzuNjR_OhkkQWnTjkh8dyaP1TT_HKFu4HZWVxvPw8gPZJSluas4/exec";
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; }
     
-    async function testCors() {
-      const result = document.getElementById('result');
-      result.textContent = 'Testing...';
-      
+    .card-hover {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+    }
+    .card-hover:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+    
+    .gradient-bg {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .spinner {
+      border: 3px solid #f3f4f6;
+      border-top: 3px solid #3b82f6;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .fade-in {
+      animation: fadeIn 0.3s ease-in;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .nav-item {
+      transition: all 0.2s ease;
+      border-left: 3px solid transparent;
+    }
+    .nav-item:hover {
+      background: rgba(59, 130, 246, 0.05);
+      border-left-color: #3b82f6;
+    }
+    .nav-item.active {
+      background: rgba(59, 130, 246, 0.1);
+      border-left-color: #3b82f6;
+      font-weight: 600;
+    }
+    
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .status-open { background: #fef3c7; color: #92400e; }
+    .status-inprogress { background: #dbeafe; color: #1e40af; }
+    .status-resolved { background: #d1fae5; color: #065f46; }
+    
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      animation: fadeIn 0.2s ease;
+    }
+    
+    .modal-content {
+      background: white;
+      border-radius: 16px;
+      max-width: 800px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    
+    input, textarea, select {
+      transition: all 0.2s ease;
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .filter-btn {
+      transition: all 0.2s ease;
+    }
+    .filter-btn.active {
+      background: #3b82f6;
+      color: white;
+    }
+  </style>
+</head>
+<body class="bg-gray-50">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useEffect, useState, useMemo, useRef } = React;
+    
+    const qs = new URLSearchParams(location.search);
+    const GAS = qs.get('gas') || window.ENV_GAS_URL || '';
+    const INR = new Intl.NumberFormat('en-IN', { style:'currency', currency:'INR', maximumFractionDigits:0 });
+
+      // 🔽 ADD THIS HELPER RIGHT HERE
+  function driveDirectLink(url, size = 100) {
+    if (!url) return "";
+    const match1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    const match2 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    const id = (match1 && match1[1]) || (match2 && match2[1]);
+    return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w${size}` : url;
+  }
+
+
+    async function fetchWithTimeout(url, opts={}, ms=12000){
+      const ctl = new AbortController();
+      const id = setTimeout(() => ctl.abort(), ms);
       try {
-        const response = await fetch(GAS_URL + '?action=testCors');
-        const data = await response.json();
-        result.textContent = 'Success: ' + JSON.stringify(data);
-        result.style.color = 'green';
-      } catch (error) {
-        result.textContent = 'Error: ' + error.message;
-        result.style.color = 'red';
+        return await fetch(url, {...opts, signal: ctl.signal});
+      } finally {
+        clearTimeout(id);
       }
     }
+
+    async function getJSON(action, extra={}){
+      const u = new URL(GAS);
+      if(!GAS) throw new Error('Backend not configured');
+      u.searchParams.set('action', action);
+      for(const [k,v] of Object.entries(extra)) u.searchParams.set(k, v);
+      const r = await fetchWithTimeout(u, {cache:'no-store'});
+      if(!r.ok) throw new Error(await r.text().catch(() => r.statusText));
+      return r.json();
+    }
+
+async function postPlain(body){
+  if(!GAS) throw new Error('Backend not configured');
+  // Use longer timeout for file uploads (60 seconds)
+  const r = await fetchWithTimeout(GAS, {
+    method: 'POST',
+    headers: {'Content-Type': 'text/plain;charset=utf-8'},
+    body: JSON.stringify(body)
+  }, 60000); // 60 second timeout for large files
+  if(!r.ok) throw new Error(await r.text().catch(() => r.statusText));
+  return r.json();
+}
+
+    const api = {
+      async login(u, p) {
+        try {
+          return await postPlain({op:'login', username:u, password:p});
+        } catch {
+          return getJSON('login', {u, p});
+        }
+      },
+      async sessionInfo(token) {
+        return postPlain({op:'sessionInfo', token});
+      },
+      list: {
+        Directory: () => getJSON('listDirectory'),
+        Notices: () => getJSON('listNotices'),
+        Issues: () => getJSON('listIssues'),
+        Transactions: () => getJSON('listTransactions'),
+        Documents: () => getJSON('listDocuments'),
+        Voters: () => getJSON('listVoters'),
+        OpeningBalances: () => getJSON('listOpeningBalances').catch(() => ({rows:[]})),
+        ChartOfAccounts: () => getJSON('listChartOfAccounts').catch(() => ({rows:[]})),
+        Tenants: () => getJSON('listTenants')
+      },
+      async upsertRow(sheet, key, row) {
+        return postPlain({op:'upsertRow', sheet, key, row});
+      },
+      async createRow(sheet, row) {
+        return postPlain({op:'createRow', sheet, row});
+      }
+    };
+
+    // Upload a single field if it contains a data: URL. Returns the same object with URL swapped in.
+async function maybeUploadField(obj, sheet, field, namePrefix = field.toLowerCase()) {
+  const val = obj[field];
+  if (!val || typeof val !== 'string' || !val.startsWith('data:')) return obj;
+
+  const mimeMatch = val.match(/data:([^;]+)(;base64)?/);
+  const mime = (mimeMatch && mimeMatch[1]) || 'application/octet-stream';
+  const ext  = (mime.split('/')[1] || 'bin').replace('+xml','');
+
+  const res = await postPlain({
+    op: 'uploadFile',
+    sheet,                    // must match a key in DRIVE_FOLDERS
+    fileName: `${namePrefix}_${Date.now()}.${ext}`,
+    fileData: val             // full data URL
+  });
+
+  if (!res.ok) throw new Error(res.error || 'Upload failed');
+  obj[field] = res.file.url;  // replace base64 with Drive URL
+  return obj;
+}
+
+
+    function showToast(message, type='info') {
+      const toastContainer = document.getElementById('toast-container') || (() => {
+        const div = document.createElement('div');
+        div.id = 'toast-container';
+        div.className = 'fixed top-4 right-4 z-50 flex flex-col gap-2';
+        document.body.appendChild(div);
+        return div;
+      })();
+      
+      const toast = document.createElement('div');
+      const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
+      toast.className = `${bgColor} text-white px-6 py-3 rounded-lg shadow-lg fade-in`;
+      toast.textContent = message;
+      toastContainer.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    function LoginScreen({ onSuccess }) {
+      const [username, setUsername] = useState('');
+      const [password, setPassword] = useState('');
+      const [error, setError] = useState('');
+      const [loading, setLoading] = useState(false);
+
+      async function handleLogin(e) {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+        
+        try {
+          const r = await api.login(username, password);
+          if (r?.ok && r?.token) {
+            localStorage.setItem('session', r.token);
+            onSuccess({
+              token: r.token,
+              role: (r.role || 'user').toLowerCase(),
+              username: r.username || username
+            });
+            showToast('Welcome back!', 'success');
+          } else {
+            setError(r?.error || 'Invalid credentials');
+          }
+        } catch (e) {
+          setError(String(e));
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      return (
+        <div className="min-h-screen gradient-bg flex items-center justify-center p-4">
+          <div className="w-full max-w-md">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 fade-in">
+              <div className="text-center mb-8">
+                <div className="w-16 h-16 bg-blue-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                  </svg>
+                </div>
+                <h1 className="text-2xl font-bold text-gray-900">Global Hillview</h1>
+                <p className="text-gray-600 mt-2">Society Management Portal</p>
+          
+              </div>
+
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={e => setUsername(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                    placeholder="Enter your username"
+                    required
+                    autoFocus
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                    placeholder="Enter your password"
+                    required
+                  />
+                </div>
+
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {loading && <div className="spinner" />}
+                  {loading ? 'Signing in...' : 'Sign In'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setUsername('demo'); setPassword('demo'); }}
+                  className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 rounded-lg transition-colors"
+                >
+                  Use Demo Account
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function Dashboard({ data, onNavigate, isAdmin }) {
+      const stats = useMemo(() => {
+        const openIssues = data.Issues.filter(i => (i.Status || '').toLowerCase() !== 'resolved').length;
+        const totalEnviroStaff = data.Directory.length;
+        const collected = data.Transactions
+          .filter(t => (t.Type || '').toLowerCase() === 'credit')
+          .reduce((sum, t) => sum + Number(t.Amount || 0), 0);
+        const expenses = data.Transactions
+          // NEW (correct)
+.filter(t => {
+const type = (t.Type || '').toLowerCase().trim();
+return type === 'debit' || type === 'expense';
+})
+          .reduce((sum, t) => sum + Number(t.Amount || 0), 0);
+        
+        return { openIssues, totalEnviroStaff, collected, expenses };
+      }, [data]);
+
+      return (
+        <div className="space-y-6 fade-in">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div 
+              onClick={() => onNavigate('Directory')}
+              className="bg-white rounded-2xl p-6 shadow-sm card-hover"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-600 text-sm font-medium">Total Enviro Staff</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-2">{stats.totalEnviroStaff}</p>
+                </div>
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <div 
+              onClick={() => onNavigate('Issues')}
+              className="bg-white rounded-2xl p-6 shadow-sm card-hover"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-600 text-sm font-medium">Open Issues</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-2">{stats.openIssues}</p>
+                </div>
+                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {isAdmin && (
+              <>
+                <div 
+                  onClick={() => onNavigate('Transactions')}
+                  className="bg-white rounded-2xl p-6 shadow-sm card-hover"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-600 text-sm font-medium">Collected</p>
+                      <p className="text-3xl font-bold text-green-600 mt-2">{INR.format(stats.collected)}</p>
+                    </div>
+                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                      <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div 
+                  onClick={() => onNavigate('Transactions')}
+                  className="bg-white rounded-2xl p-6 shadow-sm card-hover"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-600 text-sm font-medium">Expenses</p>
+                      <p className="text-3xl font-bold text-red-600 mt-2">{INR.format(stats.expenses)}</p>
+                    </div>
+                    <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                      <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white rounded-2xl shadow-sm p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Recent Notices</h3>
+                <button
+                  onClick={() => onNavigate('Notices')}
+                  className="text-sm text-blue-500 hover:text-blue-600 font-medium"
+                >
+                  View All →
+                </button>
+              </div>
+              <div className="space-y-3">
+                {data.Notices.slice(0, 5).map((notice, i) => (
+                  <div 
+                    key={i} 
+                    onClick={() => onNavigate('Notices')}
+                    className="flex items-start gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{notice.Subject}</p>
+                      <p className="text-xs text-gray-500 mt-1">{notice.Date}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Recent Issues</h3>
+                <button
+                  onClick={() => onNavigate('Issues')}
+                  className="text-sm text-blue-500 hover:text-blue-600 font-medium"
+                >
+                  View All →
+                </button>
+              </div>
+              <div className="space-y-3">
+                {data.Issues.slice(0, 5).map((issue, i) => (
+                  <div 
+                    key={i} 
+                    onClick={() => onNavigate('Issues')}
+                    className="flex items-start gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{issue.Title || issue.Description}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className={`status-badge status-${(issue.Status || 'open').toLowerCase().replace(' ', '')}`}>
+                          {issue.Status || 'Open'}
+                        </span>
+                        <span className="text-xs text-gray-500">{issue['Tracking ID']}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Directory Page with Upload to Drive
+    function DirectoryPage({ data, isAdmin, onRefresh }) {
+      const [search, setSearch] = useState('');
+      const [activeFilter, setActiveFilter] = useState('all');
+      const [showAddModal, setShowAddModal] = useState(false);
+      const [editRow, setEditRow] = useState(null);
+      const [uploading, setUploading] = useState(false);
+
+      const filtered = useMemo(() => {
+        let result = data;
+        
+        if (activeFilter === 'active') {
+          result = result.filter(r => (r.Active || '').toLowerCase() === 'yes');
+        } else if (activeFilter === 'inactive') {
+          result = result.filter(r => (r.Active || '').toLowerCase() === 'no' || (r.Active || '').toLowerCase() === 'non-active');
+        }
+        
+        if (search.trim()) {
+          const q = search.toLowerCase();
+          result = result.filter(r => 
+            Object.values(r).some(v => String(v).toLowerCase().includes(q))
+          );
+        }
+        
+        return result;
+      }, [data, search, activeFilter]);
+
+      const deptStats = useMemo(() => {
+        const stats = {};
+        data.forEach(r => {
+          const dept = r.Department || r.Designation || 'Other';
+          if (!stats[dept]) stats[dept] = 0;
+          if ((r.Active || '').toLowerCase() === 'yes') stats[dept]++;
+        });
+        return Object.entries(stats).sort((a, b) => b[1] - a[1]);
+      }, [data]);
+
+      return (
+        <div className="space-y-6 fade-in">
+          <div className="bg-white rounded-2xl shadow-sm p-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={() => setActiveFilter('all')}
+                className={`filter-btn px-4 py-2 rounded-lg font-medium ${activeFilter === 'all' ? 'active' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              >
+                All ({data.length})
+              </button>
+              <button
+                onClick={() => setActiveFilter('active')}
+                className={`filter-btn px-4 py-2 rounded-lg font-medium ${activeFilter === 'active' ? 'active' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              >
+                Active
+              </button>
+              <button
+                onClick={() => setActiveFilter('inactive')}
+                className={`filter-btn px-4 py-2 rounded-lg font-medium ${activeFilter === 'inactive' ? 'active' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              >
+                Non-Active
+              </button>
+            </div>
+          </div>
+
+          {deptStats.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {deptStats.map(([dept, count]) => (
+                <div key={dept} className="bg-white rounded-xl p-4 shadow-sm">
+                  <p className="text-xs text-gray-600 truncate" title={dept}>{dept}</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{count}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="bg-white rounded-2xl shadow-sm">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <h2 className="text-xl font-semibold text-gray-900">Directory ({filtered.length})</h2>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Search..."
+                    className="px-4 py-2 border border-gray-300 rounded-lg"
+                  />
+                  {isAdmin && (
+                    <button
+                      onClick={() => setShowAddModal(true)}
+                      className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center gap-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Photo</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Gender</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Shift</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Joined On</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Manager</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Active</th>
+                    {isAdmin && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filtered.map((row, i) => (
+                    <tr key={i} className="hover:bg-gray-50">
+<td className="px-4 py-3">
+  {row.Photo ? (
+    <img
+      src={driveDirectLink(row.Photo, 80)}
+      alt="Photo"
+      className="w-10 h-10 rounded-full object-cover bg-gray-100"
+      referrerPolicy="no-referrer"
+      onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling.style.display = 'flex'; }}
+    />
+  ) : null}
+  <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-xs" style={{display: row.Photo ? 'none' : 'flex'}}>
+    {(row.Name || row['Employee Name'] || 'N')[0]}
+  </div>
+</td>
+
+                      <td className="px-4 py-3 text-sm">{row.Name || row['Employee Name']}</td>
+                      <td className="px-4 py-3 text-sm">{row.Department || row.Designation}</td>
+                      <td className="px-4 py-3 text-sm">{row.Gender}</td>
+                      <td className="px-4 py-3 text-sm">{row.Shift}</td>
+                      <td className="px-4 py-3 text-sm">{row['Joined On']}</td>
+                      <td className="px-4 py-3 text-sm">{row.Manager}</td>
+                      <td className="px-4 py-3">
+                        <span className={`status-badge ${(row.Active || '').toLowerCase() === 'yes' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
+                          {row.Active || 'No'}
+                        </span>
+                      </td>
+                      {isAdmin && (
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => setEditRow(row)}
+                            className="text-blue-500 hover:text-blue-600 text-sm font-medium"
+                          >
+                            Edit
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {(showAddModal || editRow) && (
+            <DirectoryModal
+              row={editRow}
+              uploading={uploading}
+              onClose={() => { setShowAddModal(false); setEditRow(null); }}
+              onSave={async (data) => {
+  try {
+    setUploading(true);
+
+    await maybeUploadField(data, 'Directory', 'Photo', 'photo');
+
+    if (editRow) {
+      await api.upsertRow('Directory', 'Serial', { ...editRow, ...data });
+    } else {
+      await api.createRow('Directory', data);
+    }
+
+    await onRefresh();
+    setShowAddModal(false);
+    setEditRow(null);
+    showToast('Saved successfully', 'success');
+  } catch (e) {
+    showToast('Failed: ' + String(e), 'error');
+  } finally {
+    setUploading(false);
+  }
+}}
+
+            />
+          )}
+        </div>
+      );
+    }
+
+    function DirectoryModal({ row, uploading, onClose, onSave }) {
+      const [formData, setFormData] = useState(row || {
+        Name: '', Department: '', Gender: '', Shift: '', 'Joined On': '', Manager: '', Active: 'Yes', Photo: ''
+      });
+
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold">{row ? 'Edit' : 'Add'} Employee</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                  <input
+                    type="text"
+                    value={formData.Name || formData['Employee Name'] || ''}
+                    onChange={e => setFormData({...formData, Name: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
+                  <input
+                    type="text"
+                    value={formData.Department || formData.Designation || ''}
+                    onChange={e => setFormData({...formData, Department: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                  <select
+                    value={formData.Gender || ''}
+                    onChange={e => setFormData({...formData, Gender: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  >
+                    <option value="">Select</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Shift</label>
+                  <select
+                    value={formData.Shift || ''}
+                    onChange={e => setFormData({...formData, Shift: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  >
+                    <option value="">Select</option>
+                    <option value="Day">Day</option>
+                    <option value="Night">Night</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Joined On</label>
+                  {formData['Joined On'] ? (
+  <div className="flex items-center gap-3">
+    <div className="px-3 py-2 rounded-lg bg-gray-100 text-gray-800">
+      Joined on: {new Date(formData['Joined On']).toLocaleDateString()}
+    </div>
+    <button
+      type="button"
+      className="text-sm underline text-blue-600"
+      onClick={() => setFormData({ ...formData, 'Joined On': '' })}
+    >
+      Change
+    </button>
+  </div>
+) : (
+  <input
+    type="date"
+    value={formData['Joined On'] || ''}
+    onChange={e => setFormData({ ...formData, 'Joined On': e.target.value })}
+    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+  />
+)}
+
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Manager</label>
+                  <input
+                    type="text"
+                    value={formData.Manager || ''}
+                    onChange={e => setFormData({...formData, Manager: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                {row && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Resigned On</label>
+                    <input
+                      type="date"
+                      value={formData['Resigned On'] || ''}
+                      onChange={e => setFormData({...formData, 'Resigned On': e.target.value})}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    />
+                  </div>
+                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Active</label>
+                  <select
+                    value={formData.Active || 'Yes'}
+                    onChange={e => setFormData({...formData, Active: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  >
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Photo</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={e => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = () => setFormData({...formData, Photo: reader.result});
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  />
+                  {formData.Photo && (
+                    <img src={formData.Photo} alt="Preview" className="mt-2 w-20 h-20 rounded-lg object-cover" />
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                onClick={onClose}
+                disabled={uploading}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => onSave(formData)}
+                disabled={uploading}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
+              >
+                {uploading && <div className="spinner" style={{width: '16px', height: '16px', borderWidth: '2px'}} />}
+                {uploading ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Notices Page with View/Edit
+    function NoticesPage({ data, isAdmin, onRefresh }) {
+      const [search, setSearch] = useState('');
+      const [showAddModal, setShowAddModal] = useState(false);
+      const [viewRow, setViewRow] = useState(null);
+      const [editRow, setEditRow] = useState(null);
+      const [uploading, setUploading] = useState(false);
+
+      const filtered = useMemo(() => {
+        if (!search.trim()) return data;
+        const q = search.toLowerCase();
+        return data.filter(r => 
+          Object.values(r).some(v => String(v).toLowerCase().includes(q))
+        );
+      }, [data, search]);
+
+      return (
+        <div className="space-y-6 fade-in">
+          <div className="bg-white rounded-2xl shadow-sm">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <h2 className="text-xl font-semibold text-gray-900">Notices ({filtered.length})</h2>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Search..."
+                    className="px-4 py-2 border border-gray-300 rounded-lg"
+                  />
+                  {isAdmin && (
+                    <button
+                      onClick={() => setShowAddModal(true)}
+                      className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center gap-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subject</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase max-w-xs truncate">Description</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filtered.map((row, i) => (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-sm">{row.Date}</td>
+                      <td className="px-4 py-3 text-sm font-medium">{row.Subject}</td>
+                      <td className="px-4 py-3 text-sm">
+                      <span className="block max-w-xs truncate">{row.Description}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setViewRow(row)}
+                            className="text-blue-500 hover:text-blue-600 text-sm font-medium"
+                          >
+                            View
+                          </button>
+                          {isAdmin && (
+                            <button
+                              onClick={() => setEditRow(row)}
+                              className="text-green-500 hover:text-green-600 text-sm font-medium"
+                            >
+                              Edit
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {viewRow && <NoticeViewModal row={viewRow} onClose={() => setViewRow(null)} />}
+          
+          {(showAddModal || editRow) && (
+            <NoticeModal
+              row={editRow}
+              uploading={uploading}
+              onClose={() => { setShowAddModal(false); setEditRow(null); }}
+              onSave={async (data) => {
+  try {
+    setUploading(true);
+
+    await maybeUploadField(data, 'Notices', 'Media', 'notice');
+
+    if (editRow) {
+      await api.upsertRow('Notices', 'Serial Number', { ...editRow, ...data });
+    } else {
+      await api.createRow('Notices', data);
+    }
+
+    await onRefresh();
+    setShowAddModal(false);
+    setEditRow(null);
+    showToast('Notice saved', 'success');
+  } catch (e) {
+    showToast('Failed: ' + String(e), 'error');
+  } finally {
+    setUploading(false);
+  }
+}}
+
+            />
+          )}
+        </div>
+      );
+    }
+
+    function NoticeViewModal({ row, onClose }) {
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold">Notice Details</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                <p className="text-gray-900">{row.Date}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                <p className="text-gray-900 font-medium">{row.Subject}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <p className="text-gray-900 whitespace-pre-wrap">{row.Description}</p>
+              </div>
+{row.Media && (
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-2">Attachment</label>
+    {row.Media.match(/\.(jpg|jpeg|png|gif)$/i) ? (
+      <img src={row.Media} alt="Notice" className="max-w-full h-auto rounded-lg" />
+    ) : (
+      <a
+        href={row.Media}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-blue-500 hover:text-blue-600 flex items-center gap-2"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+        </svg>
+        View Attachment
+      </a>
+    )}
+  </div>
+)}
+            </div>
+            <div className="p-6 border-t border-gray-200 flex justify-end">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function NoticeModal({ row, uploading, onClose, onSave }) {
+      const [formData, setFormData] = useState(row || {
+        Date: new Date().toISOString().split('T')[0],
+        Subject: '',
+        Description: '',
+        Media: ''
+      });
+
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold">{row ? 'Edit' : 'Add'} Notice</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                <input
+                  type="date"
+                  value={formData.Date}
+                  onChange={e => setFormData({...formData, Date: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
+                <input
+                  type="text"
+                  value={formData.Subject}
+                  onChange={e => setFormData({...formData, Subject: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <textarea
+                  value={formData.Description}
+                  onChange={e => setFormData({...formData, Description: e.target.value})}
+                  rows="4"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Attach File</label>
+                <input
+                  type="file"
+                  onChange={e => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = () => setFormData({...formData, Media: reader.result});
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                onClick={onClose}
+                disabled={uploading}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => onSave(formData)}
+                disabled={uploading}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
+              >
+                {uploading && <div className="spinner" style={{width: '16px', height: '16px', borderWidth: '2px'}} />}
+                {uploading ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Issues Page with View
+    function IssuesPage({ data, isAdmin, onRefresh }) {
+      const [search, setSearch] = useState('');
+      const [editRow, setEditRow] = useState(null);
+      const [viewRow, setViewRow] = useState(null);
+      const [showAddModal, setShowAddModal] = useState(false);
+      const [uploading, setUploading] = useState(false);
+
+      const stats = useMemo(() => {
+        const open = data.filter(i => (i.Status || 'Open').toLowerCase() === 'open').length;
+        const inProgress = data.filter(i => (i.Status || '').toLowerCase() === 'inprogress').length;
+        const resolved = data.filter(i => (i.Status || '').toLowerCase() === 'resolved').length;
+        
+        const ratings = data.filter(i => i['Feedback Rating']).map(i => Number(i['Feedback Rating']) || 0);
+        const avgRating = ratings.length ? (ratings.reduce((a,b) => a+b, 0) / ratings.length).toFixed(1) : 0;
+        
+        return { open, inProgress, resolved, avgRating, total: data.length };
+      }, [data]);
+
+      const filtered = useMemo(() => {
+        if (!search.trim()) return data;
+        const q = search.toLowerCase();
+        return data.filter(r => 
+          Object.values(r).some(v => String(v).toLowerCase().includes(q))
+        );
+      }, [data, search]);
+
+      return (
+        <div className="space-y-6 fade-in">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-white rounded-xl p-4 shadow-sm">
+              <p className="text-xs text-gray-600">Open</p>
+              <p className="text-2xl font-bold text-orange-600 mt-1">{stats.open}</p>
+            </div>
+            <div className="bg-white rounded-xl p-4 shadow-sm">
+              <p className="text-xs text-gray-600">In Progress</p>
+              <p className="text-2xl font-bold text-blue-600 mt-1">{stats.inProgress}</p>
+            </div>
+            <div className="bg-white rounded-xl p-4 shadow-sm">
+              <p className="text-xs text-gray-600">Resolved</p>
+              <p className="text-2xl font-bold text-green-600 mt-1">{stats.resolved}</p>
+            </div>
+            <div className="bg-white rounded-xl p-4 shadow-sm">
+              <p className="text-xs text-gray-600">Avg. Rating</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{stats.avgRating} ⭐</p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+<h2 className="text-xl font-semibold text-gray-900">Issues ({filtered.length})</h2>
+<div className="flex items-center gap-3">
+  <input
+    type="text"
+    value={search}
+    onChange={e => setSearch(e.target.value)}
+    placeholder="Search..."
+    className="px-4 py-2 border border-gray-300 rounded-lg"
+  />
+  <button
+    onClick={() => setShowAddModal(true)}
+    className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center gap-2"
+  >
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+    </svg>
+    Report Issue
+  </button>
+</div>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tracking ID</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Redressal Remark</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filtered.map((row, i) => (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-sm">{row['Tracking ID']}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="line-clamp-1">{row.Title || row.Description}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`status-badge status-${(row.Status || 'open').toLowerCase().replace(' ', '')}`}>
+                          {row.Status || 'Open'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="line-clamp-1">{row['Redressal Remark']}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setViewRow(row)}
+                            className="text-blue-500 hover:text-blue-600 text-sm font-medium"
+                          >
+                            View
+                          </button>
+                          {isAdmin && (
+                            <button
+                              onClick={() => setEditRow(row)}
+                              className="text-green-500 hover:text-green-600 text-sm font-medium"
+                            >
+                              Edit
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {viewRow && <IssueViewModal row={viewRow} onClose={() => setViewRow(null)} />}
+          
+         {editRow && (
+  <IssueModal
+    row={editRow}
+    onClose={() => setEditRow(null)}
+    onSave={async (data) => {
+  try {
+    const fullUpdate = {
+      'Tracking ID': editRow['Tracking ID'],
+      Status: data.Status,
+      'Redressal Remark': data['Redressal Remark'],
+    };
+
+    await api.upsertRow('Issues', 'Tracking ID', fullUpdate);
+    await onRefresh();
+    setEditRow(null);
+    showToast('Updated successfully', 'success');
+  } catch (e) {
+    console.error('Update error:', e);
+    showToast('Failed to update: ' + String(e.message || e), 'error');
+  }
+}}
+
+  />
+)}
+{showAddModal && (
+  <AddIssueModal
+    data={data}
+    uploading={uploading}
+    onClose={() => setShowAddModal(false)}
+onSave={async (issueData) => {
+  try {
+    setUploading(true);
+
+    // ✅ simplified helper-based upload
+    await maybeUploadField(issueData, 'Issues', 'Media URL', 'issue');
+
+    await api.createRow('Issues', issueData);
+    await onRefresh();
+    setShowAddModal(false);
+    showToast('Issue reported successfully', 'success');
+  } catch (e) {
+    showToast('Failed: ' + String(e), 'error');
+  } finally {
+    setUploading(false);
+  }
+}}
+  />
+)}
+</div>
+);
+} // <-- close IssuesPage here
+
+function AddIssueModal({ data, uploading, onClose, onSave }) {
+  const nextTrackingId = useMemo(() => {
+    if (!data || data.length === 0) return 1001;
+    const ids = data.map(d => Number(d['Tracking ID']) || 0);
+    return Math.max(...ids) + 1;
+  }, [data]);
+
+  const [formData, setFormData] = useState({
+    'Tracking ID': nextTrackingId,
+    'Date and Time Raised': new Date().toISOString().replace('T', ' ').substring(0, 19),
+    Tower: '',
+    Flat: '',
+    Issue: '',
+    Description: '',
+    'Media URL': '',
+    Status: 'Open'
+  });
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="p-6 border-b border-gray-200">
+          <h3 className="text-xl font-semibold">Report New Issue</h3>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-sm text-blue-800">Tracking ID: <span className="font-bold">#{nextTrackingId}</span></p>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Tower *</label>
+              <input
+                type="text"
+                value={formData.Tower}
+                onChange={e => setFormData({...formData, Tower: e.target.value})}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Flat *</label>
+              <input
+                type="text"
+                value={formData.Flat}
+                onChange={e => setFormData({...formData, Flat: e.target.value})}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Issue *</label>
+            <input
+              type="text"
+              value={formData.Issue}
+              onChange={e => setFormData({...formData, Issue: e.target.value})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
+            <textarea
+              value={formData.Description}
+              onChange={e => setFormData({...formData, Description: e.target.value})}
+              rows="4"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Photo/Video</label>
+            <input
+              type="file"
+              accept="image/*,video/*"
+              capture="environment"
+              onChange={e => {
+                const file = e.target.files[0];
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onload = () => setFormData({...formData, 'Media URL': reader.result});
+                  reader.readAsDataURL(file);
+                }
+              }}
+              className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+            {formData['Media URL'] && (
+              <div className="mt-2">
+                {formData['Media URL'].startsWith('data:image') ? (
+                  <img src={formData['Media URL']} alt="Preview" className="w-32 h-32 rounded-lg object-cover" />
+                ) : (
+                  <p className="text-sm text-green-600">✓ Media attached</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            disabled={uploading}
+            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onSave(formData)}
+            disabled={uploading || !formData.Tower || !formData.Flat || !formData.Issue || !formData.Description}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
+          >
+            {uploading && <div className="spinner" style={{width: '16px', height: '16px', borderWidth: '2px'}} />}
+            {uploading ? 'Submitting...' : 'Submit Issue'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function IssueViewModal({ row, onClose }) {
+  const columns = Object.keys(row);
+  
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="p-6 border-b border-gray-200">
+          <h3 className="text-xl font-semibold">Issue Details - {row['Tracking ID']}</h3>
+        </div>
+        <div className="p-6 space-y-3">
+          {columns.map(col => (
+            <div key={col}>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{col}</label>
+              {(col === 'Media URL' || col === 'Media' || col === 'Attachment') && row[col] ? (
+                row[col].match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                  <img src={row[col]} alt="Media" className="max-w-full h-auto rounded-lg" />
+               ) : (
+  <a
+    href={row[col]}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-blue-500 hover:text-blue-600 flex items-center gap-2"
+  >
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+    </svg>
+    View Attachment
+  </a>
+)
+              ) : (
+                <p className="text-gray-900">{row[col] || '-'}</p>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="p-6 border-t border-gray-200 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+    function IssueModal({ row, onClose, onSave }) {
+  const [formData, setFormData] = useState({
+    Status: row.Status || 'Open',
+    'Redressal Remark': row['Redressal Remark'] || ''
+  });
+  const [saving, setSaving] = useState(false);
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="p-6 border-b border-gray-200">
+          <h3 className="text-xl font-semibold">Edit Issue - {row['Tracking ID']}</h3>
+        </div>
+        <div className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+            <select
+              value={formData.Status}
+              onChange={e => setFormData({...formData, Status: e.target.value})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            >
+              <option value="Open">Open</option>
+              <option value="InProgress">In Progress</option>
+              <option value="Resolved">Resolved</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Redressal Remark</label>
+            <textarea
+              value={formData['Redressal Remark']}
+              onChange={e => setFormData({...formData, 'Redressal Remark': e.target.value})}
+              rows="4"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            />
+          </div>
+        </div>
+        <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            disabled={saving}
+            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={async () => {
+              setSaving(true);
+              try {
+                await onSave(formData);
+              } catch (e) {
+                showToast('Save failed: ' + e.message, 'error');
+              } finally {
+                setSaving(false);
+              }
+            }}
+            disabled={saving}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
+          >
+            {saving && <div className="spinner" style={{width: '16px', height: '16px', borderWidth: '2px'}} />}
+            {saving ? 'Saving...' : 'Save'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+    // Transactions Page with View/Edit and Upload
+    function TransactionsPage({ data, isAdmin, onRefresh, chartOfAccounts }) {
+      const [search, setSearch] = useState('');
+      const [showAddModal, setShowAddModal] = useState(false);
+      const [viewRow, setViewRow] = useState(null);
+      const [editRow, setEditRow] = useState(null);
+      const [uploading, setUploading] = useState(false);
+
+      const stats = useMemo(() => {
+        const income = data.filter(t => (t.Type || '').toLowerCase() === 'credit').reduce((sum, t) => sum + Number(t.Amount || 0), 0);
+        const expense = data.filter(t => {
+const type = (t.Type || '').toLowerCase().trim();
+return type === 'debit' || type === 'expense';
+}).reduce((sum, t) => sum + Number(t.Amount || 0), 0);
+        return { income, expense, profit: income - expense };
+      }, [data]);
+
+      const filtered = useMemo(() => {
+        if (!search.trim()) return data;
+        const q = search.toLowerCase();
+        return data.filter(r => 
+          Object.values(r).some(v => String(v).toLowerCase().includes(q))
+        );
+      }, [data, search]);
+
+      return (
+        <div className="space-y-6 fade-in">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-white rounded-xl p-4 shadow-sm">
+              <p className="text-xs text-gray-600">Total Income</p>
+              <p className="text-2xl font-bold text-green-600 mt-1">{INR.format(stats.income)}</p>
+            </div>
+            <div className="bg-white rounded-xl p-4 shadow-sm">
+              <p className="text-xs text-gray-600">Total Expense</p>
+              <p className="text-2xl font-bold text-red-600 mt-1">{INR.format(stats.expense)}</p>
+            </div>
+            <div className="bg-white rounded-xl p-4 shadow-sm">
+              <p className="text-xs text-gray-600">Net Profit/Loss</p>
+              <p className={`text-2xl font-bold mt-1 ${stats.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {INR.format(stats.profit)}
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <h2 className="text-xl font-semibold text-gray-900">Transactions ({filtered.length})</h2>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Search..."
+                    className="px-4 py-2 border border-gray-300 rounded-lg"
+                  />
+                  {isAdmin && (
+                    <button
+                      onClick={() => setShowAddModal(true)}
+                      className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center gap-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filtered.map((row, i) => (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-sm">{row.Date}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="line-clamp-1">{row.Description}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`status-badge ${(row.Type || '').toLowerCase() === 'credit' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                          {row.Type || 'Debit'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm font-medium">{INR.format(Number(row.Amount || 0))}</td>
+                      <td className="px-4 py-3 text-sm">{row.Category}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setViewRow(row)}
+                            className="text-blue-500 hover:text-blue-600 text-sm font-medium"
+                          >
+                            View
+                          </button>
+                          {isAdmin && (
+                            <button
+                              onClick={() => setEditRow(row)}
+                              className="text-green-500 hover:text-green-600 text-sm font-medium"
+                            >
+                              Edit
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {viewRow && <TransactionViewModal row={viewRow} onClose={() => setViewRow(null)} />}
+
+          {(showAddModal || editRow) && (
+            <TransactionModal
+              row={editRow}
+              chartOfAccounts={chartOfAccounts}
+              uploading={uploading}
+              onClose={() => { setShowAddModal(false); setEditRow(null); }}
+              onSave={async (data) => {
+                try {
+                  setUploading(true);
+                  
+await maybeUploadField(data, 'Transactions', 'Attachment', 'txn');
+
+if (editRow) {
+  await api.upsertRow('Transactions', 'Transaction ID', { ...editRow, ...data });
+} else {
+  await api.createRow('Transactions', data);
+}
+
+                  await onRefresh();
+                  setShowAddModal(false);
+                  setEditRow(null);
+                  showToast('Transaction saved', 'success');
+                } catch (e) {
+                  showToast('Failed: ' + String(e), 'error');
+                } finally {
+                  setUploading(false);
+                }
+              }}
+            />
+          )}
+        </div>
+      );
+    }
+
+    function TransactionViewModal({ row, onClose }) {
+      const columns = Object.keys(row);
+      
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold">Transaction Details</h3>
+            </div>
+            <div className="p-6 space-y-3">
+              {columns.map(col => (
+                <div key={col}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{col}</label>
+                  {col === 'Attachment' && row[col] ? (
+                    <a
+                      href={row[col]}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:text-blue-600"
+                    >
+                      View Attachment
+                    </a>
+                  ) : (
+                    <p className="text-gray-900">{row[col] || '-'}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="p-6 border-t border-gray-200 flex justify-end">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function TransactionModal({ row, chartOfAccounts, uploading, onClose, onSave }) {
+      const [formData, setFormData] = useState(row || {
+        Date: new Date().toISOString().split('T')[0],
+        Description: '',
+        Type: 'Credit',
+        Amount: '',
+        Category: '',
+        Attachment: ''
+      });
+
+      const categories = useMemo(() => {
+        return chartOfAccounts.filter(c => 
+          (c.Group || '').toLowerCase() === (formData.Type.toLowerCase() === 'credit' ? 'income' : 'expense')
+        );
+      }, [chartOfAccounts, formData.Type]);
+
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold">{row ? 'Edit' : 'Add'} Transaction</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                  <input
+                    type="date"
+                    value={formData.Date}
+                    onChange={e => setFormData({...formData, Date: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                  <select
+                    value={formData.Type}
+                    onChange={e => setFormData({...formData, Type: e.target.value, Category: ''})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  >
+                    <option value="Credit">Income (Credit)</option>
+                    <option value="Debit">Expense (Debit)</option>
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                  <input
+                    type="text"
+                    value={formData.Description}
+                    onChange={e => setFormData({...formData, Description: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Amount</label>
+                  <input
+                    type="number"
+                    value={formData.Amount}
+                    onChange={e => setFormData({...formData, Amount: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                  <select
+                    value={formData.Category}
+                    onChange={e => setFormData({...formData, Category: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map((cat, i) => (
+                      <option key={i} value={cat.Category}>{cat.Category}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Attachment</label>
+                  <input
+                    type="file"
+                    onChange={e => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = () => setFormData({...formData, Attachment: reader.result});
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                onClick={onClose}
+                disabled={uploading}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => onSave(formData)}
+                disabled={uploading}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
+              >
+                {uploading && <div className="spinner" style={{width: '16px', height: '16px', borderWidth: '2px'}} />}
+                {uploading ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Documents Page with View
+    function DocumentsPage({ data, isAdmin, onRefresh }) {
+      const [search, setSearch] = useState('');
+      const [showAddModal, setShowAddModal] = useState(false);
+      const [viewRow, setViewRow] = useState(null);
+      const [uploading, setUploading] = useState(false);
+
+      const filtered = useMemo(() => {
+        if (!search.trim()) return data;
+        const q = search.toLowerCase();
+        return data.filter(r => 
+          Object.values(r).some(v => String(v).toLowerCase().includes(q))
+        );
+      }, [data, search]);
+
+      const nextSerial = useMemo(() => {
+        const serials = data.map(d => Number(d['Serial Number']) || 0);
+        return serials.length ? Math.max(...serials) + 1 : 1;
+      }, [data]);
+
+      return (
+        <div className="space-y-6 fade-in">
+          <div className="bg-white rounded-2xl shadow-sm">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <h2 className="text-xl font-semibold text-gray-900">Documents ({filtered.length})</h2>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Search..."
+                    className="px-4 py-2 border border-gray-300 rounded-lg"
+                  />
+                  {isAdmin && (
+                    <button
+                      onClick={() => setShowAddModal(true)}
+                      className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center gap-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+              
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filtered.map((row, i) => (
+                    <tr key={i} className="hover:bg-gray-50">
+                      
+                      <td className="px-4 py-3 text-sm">{row.Title}</td>
+                      <td className="px-4 py-3 text-sm">{row.Date}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="line-clamp-1">{row.Description}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => setViewRow(row)}
+                          className="text-blue-500 hover:text-blue-600 text-sm font-medium"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {viewRow && <DocumentViewModal row={viewRow} onClose={() => setViewRow(null)} />}
+
+          {showAddModal && (
+            <DocumentModal
+              nextSerial={nextSerial}
+              uploading={uploading}
+              onClose={() => setShowAddModal(false)}
+              onSave={async (data) => {
+                try {
+                  setUploading(true);
+                  
+
+await maybeUploadField(data, 'Documents', 'Media', 'doc');                  
+                  await api.createRow('Documents', data);
+                  await onRefresh();
+                  setShowAddModal(false);
+                  showToast('Document added', 'success');
+                } catch (e) {
+                  showToast('Failed: ' + String(e), 'error');
+                } finally {
+                  setUploading(false);
+                }
+              }}
+            />
+          )}
+        </div>
+      );
+    }
+
+    function DocumentViewModal({ row, onClose }) {
+      const columns = Object.keys(row);
+      
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold">Document Details</h3>
+            </div>
+            <div className="p-6 space-y-3">
+              {columns.map(col => (
+                <div key={col}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{col}</label>
+                {col === 'Media' && row[col] ? (
+  row[col].match(/\.(jpg|jpeg|png|gif)$/i) ? (
+    <img src={row[col]} alt="Document" className="max-w-full h-auto rounded-lg" />
+  ) : (
+    <a
+      href={row[col]}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-blue-500 hover:text-blue-600 flex items-center gap-2"
+    >
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+      </svg>
+      View Attachment
+    </a>
+  )
+) : (
+  <p className="text-gray-900">{row[col] || '-'}</p>
+)}
+                </div>
+              ))}
+            </div>
+            <div className="p-6 border-t border-gray-200 flex justify-end">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function DocumentModal({ nextSerial, uploading, onClose, onSave }) {
+      const [formData, setFormData] = useState({
+        'Serial Number': nextSerial,
+        Title: '',
+        Date: new Date().toISOString().split('T')[0],
+        Description: '',
+        Media: ''
+      });
+
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold">Add Document</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-800">Auto Serial Number: <span className="font-bold">#{nextSerial}</span></p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
+                <input
+                  type="text"
+                  value={formData.Title}
+                  onChange={e => setFormData({...formData, Title: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                <input
+                  type="date"
+                  value={formData.Date}
+                  onChange={e => setFormData({...formData, Date: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <textarea
+                  value={formData.Description}
+                  onChange={e => setFormData({...formData, Description: e.target.value})}
+                  rows="3"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Attach File</label>
+                <input
+                  type="file"
+                  onChange={e => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = () => setFormData({...formData, Media: reader.result});
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                onClick={onClose}
+                disabled={uploading}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => onSave(formData)}
+                disabled={uploading}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
+              >
+                {uploading && <div className="spinner" style={{width: '16px', height: '16px', borderWidth: '2px'}} />}
+                {uploading ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Tenants Page with Upload
+function TenantsPage({ data, isAdmin, onRefresh }) {
+  const [search, setSearch] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [viewRow, setViewRow] = useState(null);
+  const [editRow, setEditRow] = useState(null);
+  const [uploading, setUploading] = useState(false);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return data;
+    const q = search.toLowerCase();
+    return data.filter(r => 
+      Object.values(r).some(v => String(v).toLowerCase().includes(q))
+    );
+  }, [data, search]);
+
+  const stats = useMemo(() => {
+    const total = data.length;
+    const verified = data.filter(t => (t['Police Verification'] || '').toLowerCase() === 'yes').length;
+    const unverified = total - verified;
+    
+    // Group by tower
+    const byTower = {};
+    data.forEach(t => {
+      const tower = t.Tower || 'Unknown';
+      byTower[tower] = (byTower[tower] || 0) + 1;
+    });
+    
+    return { total, verified, unverified, byTower };
+  }, [data]);
+
+  return (
+    <div className="space-y-6 fade-in">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <p className="text-xs text-gray-600">Total Tenants</p>
+          <p className="text-2xl font-bold text-blue-600 mt-1">{stats.total}</p>
+        </div>
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <p className="text-xs text-gray-600">Police Verified</p>
+          <p className="text-2xl font-bold text-green-600 mt-1">{stats.verified}</p>
+        </div>
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <p className="text-xs text-gray-600">Pending Verification</p>
+          <p className="text-2xl font-bold text-orange-600 mt-1">{stats.unverified}</p>
+        </div>
+      </div>
+
+      {/* Main Table */}
+      <div className="bg-white rounded-2xl shadow-sm">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <h2 className="text-xl font-semibold text-gray-900">Tenants ({filtered.length})</h2>
+            <div className="flex items-center gap-3">
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search..."
+                className="px-4 py-2 border border-gray-300 rounded-lg"
+              />
+              {isAdmin && (
+                <button
+                  onClick={() => setShowAddModal(true)}
+                  className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                  </svg>
+                  Add Tenant
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tenant Name</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Owner Name</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tower</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Flat</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mobile</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Residing Since</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Police Verification</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {filtered.map((row, i) => (
+                <tr key={i} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 text-sm font-medium">{row['Tenant Name']}</td>
+                  <td className="px-4 py-3 text-sm">{row['Owner Name']}</td>
+                  <td className="px-4 py-3 text-sm">{row.Tower}</td>
+                  <td className="px-4 py-3 text-sm">{row.Flat}</td>
+                  <td className="px-4 py-3 text-sm">{row.Mobile}</td>
+                  <td className="px-4 py-3 text-sm">{row['Residing Since']}</td>
+                  <td className="px-4 py-3">
+                    <span className={`status-badge ${(row['Police Verification'] || '').toLowerCase() === 'yes' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                      {row['Police Verification'] || 'No'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setViewRow(row)}
+                        className="text-blue-500 hover:text-blue-600 text-sm font-medium"
+                      >
+                        View
+                      </button>
+                      {isAdmin && (
+                        <button
+                          onClick={() => setEditRow(row)}
+                          className="text-green-500 hover:text-green-600 text-sm font-medium"
+                        >
+                          Edit
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {viewRow && <TenantViewModal row={viewRow} onClose={() => setViewRow(null)} />}
+
+      {(showAddModal || editRow) && (
+        <TenantModal
+          row={editRow}
+          uploading={uploading}
+          onClose={() => { setShowAddModal(false); setEditRow(null); }}
+          onSave={async (data) => {
+            try {
+              setUploading(true);
+              
+              await maybeUploadField(data, 'Tenants', 'Attachments', 'tenant');
+
+if (editRow) {
+  await api.upsertRow('Tenants', 'Tenant Name', { ...editRow, ...data });
+} else {
+  await api.createRow('Tenants', data);
+}
+
+              await onRefresh();
+              setShowAddModal(false);
+              setEditRow(null);
+              showToast('Tenant saved successfully', 'success');
+            } catch (e) {
+              showToast('Failed: ' + String(e), 'error');
+            } finally {
+              setUploading(false);
+            }
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function TenantViewModal({ row, onClose }) {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="p-6 border-b border-gray-200">
+          <h3 className="text-xl font-semibold">Tenant Details</h3>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tenant Name</label>
+              <p className="text-gray-900 font-medium">{row['Tenant Name']}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Owner Name</label>
+              <p className="text-gray-900">{row['Owner Name']}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tower</label>
+              <p className="text-gray-900">{row.Tower}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Flat</label>
+              <p className="text-gray-900">{row.Flat}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Mobile</label>
+              <p className="text-gray-900">{row.Mobile}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Aadhar</label>
+              <p className="text-gray-900">{row.Aadhar || '-'}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Residing Since</label>
+              <p className="text-gray-900">{row['Residing Since']}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Police Verification</label>
+              <span className={`status-badge ${(row['Police Verification'] || '').toLowerCase() === 'yes' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                {row['Police Verification'] || 'No'}
+              </span>
+            </div>
+          </div>
+          {row.Attachments && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Attachments</label>
+              {row.Attachments.match(/\.(jpg|jpeg|png|gif)$/i) ? (
+                <img src={row.Attachments} alt="Attachment" className="max-w-full h-auto rounded-lg" />
+              ) : (
+                <a
+                  href={row.Attachments}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-500 hover:text-blue-600 flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  View Attachment
+                </a>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="p-6 border-t border-gray-200 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TenantModal({ row, uploading, onClose, onSave }) {
+  const [formData, setFormData] = useState(row || {
+    'Tenant Name': '',
+    'Owner Name': '',
+    Tower: '',
+    Flat: '',
+    Mobile: '',
+    Aadhar: '',
+    'Residing Since': '',
+    'Police Verification': 'No',
+    Attachments: ''
+  });
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="p-6 border-b border-gray-200">
+          <h3 className="text-xl font-semibold">{row ? 'Edit' : 'Add'} Tenant</h3>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Tenant Name *</label>
+              <input
+                type="text"
+                value={formData['Tenant Name']}
+                onChange={e => setFormData({...formData, 'Tenant Name': e.target.value})}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Owner Name *</label>
+              <input
+                type="text"
+                value={formData['Owner Name']}
+                onChange={e => setFormData({...formData, 'Owner Name': e.target.value})}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Tower *</label>
+              <input
+                type="text"
+                value={formData.Tower}
+                onChange={e => setFormData({...formData, Tower: e.target.value})}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                placeholder="e.g., A, B, C"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Flat *</label>
+              <input
+                type="text"
+                value={formData.Flat}
+                onChange={e => setFormData({...formData, Flat: e.target.value})}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                placeholder="e.g., 101, 202"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Mobile *</label>
+              <input
+                type="tel"
+                value={formData.Mobile}
+                onChange={e => setFormData({...formData, Mobile: e.target.value})}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                placeholder="10-digit mobile number"
+                maxLength="10"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Aadhar Number</label>
+              <input
+                type="text"
+                value={formData.Aadhar}
+                onChange={e => setFormData({...formData, Aadhar: e.target.value})}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                placeholder="12-digit Aadhar number"
+                maxLength="12"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Residing Since *</label>
+              <input
+                type="date"
+                value={formData['Residing Since']}
+                onChange={e => setFormData({...formData, 'Residing Since': e.target.value})}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Police Verification</label>
+              <select
+                value={formData['Police Verification']}
+                onChange={e => setFormData({...formData, 'Police Verification': e.target.value})}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              >
+                <option value="No">No</option>
+                <option value="Yes">Yes</option>
+              </select>
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Attachments (Aadhar/Police Verification)</label>
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={e => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = () => setFormData({...formData, Attachments: reader.result});
+                    reader.readAsDataURL(file);
+                  }
+                }}
+                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              />
+              {formData.Attachments && (
+                <div className="mt-3">
+                  {formData.Attachments.startsWith('data:image') ? (
+                    <img src={formData.Attachments} alt="Preview" className="max-w-xs h-auto rounded-lg border" />
+                  ) : formData.Attachments.match(/\.(jpg|jpeg|png|gif)$/i) ? (
+                    <img src={formData.Attachments} alt="Preview" className="max-w-xs h-auto rounded-lg border" />
+                  ) : (
+                    <p className="text-sm text-gray-600">📎 File attached</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            disabled={uploading}
+            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onSave(formData)}
+            disabled={uploading || !formData['Tenant Name'] || !formData['Owner Name'] || !formData.Tower || !formData.Flat || !formData.Mobile || !formData['Residing Since']}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
+          >
+            {uploading && <div className="spinner" style={{width: '16px', height: '16px', borderWidth: '2px'}} />}
+            {uploading ? 'Saving...' : 'Save'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+    // Generic table for other pages
+    function GenericTable({ title, data, onRefresh, isAdmin }) {
+      const [search, setSearch] = useState('');
+
+      const filtered = useMemo(() => {
+        if (!search.trim()) return data;
+        const q = search.toLowerCase();
+        return data.filter(r => 
+          Object.values(r).some(v => String(v).toLowerCase().includes(q))
+        );
+      }, [data, search]);
+
+      const columns = useMemo(() => {
+        if (!data.length) return [];
+        return Object.keys(data[0]);
+      }, [data]);
+
+      return (
+        <div className="bg-white rounded-2xl shadow-sm fade-in">
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">{title} ({filtered.length})</h2>
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search..."
+                className="px-4 py-2 border border-gray-300 rounded-lg"
+              />
+            </div>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  {columns.map(col => (
+                    <th key={col} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      {col}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {filtered.map((row, i) => (
+                  <tr key={i} className="hover:bg-gray-50">
+                    {columns.map(col => (
+                      <td key={col} className="px-4 py-3 text-sm">
+                        {String(row[col] || '')}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            
+            {filtered.length === 0 && (
+              <div className="text-center py-12 text-gray-500">
+                No data found
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Main App Component
+    function App() {
+      const [session, setSession] = useState({ token: null, role: null, username: null });
+      const [view, setView] = useState('dashboard');
+      const [data, setData] = useState({
+        Directory: [],
+        Notices: [],
+        Issues: [],
+        Transactions: [],
+        Documents: [],
+        Voters: [],
+        OpeningBalances: [],
+        ChartOfAccounts: [],
+        Tenants: []
+      });
+      const [loading, setLoading] = useState(true);
+      const [sidebarOpen, setSidebarOpen] = useState(true);
+
+      useEffect(() => {
+        const token = qs.get('session') || localStorage.getItem('session');
+        if (token) {
+          (async () => {
+            try {
+              const s = await api.sessionInfo(token);
+              if (s?.ok) {
+                setSession({
+                  token,
+                  role: (s.role || 'user').toLowerCase(),
+                  username: s.username || 'user'
+                });
+              } else {
+                localStorage.removeItem('session');
+              }
+            } catch (e) {
+              console.error(e);
+            }
+            await refreshData();
+          })();
+        } else {
+          setLoading(false);
+        }
+      }, []);
+
+      async function refreshData() {
+        setLoading(true);
+        try {
+          const results = await Promise.all([
+            api.list.Directory(),
+            api.list.Notices(),
+            api.list.Issues(),
+            api.list.Transactions(),
+            api.list.Documents(),
+            api.list.Voters(),
+            api.list.OpeningBalances(),
+            api.list.ChartOfAccounts(),
+            api.list.Tenants()
+          ]);
+          
+          setData({
+            Directory: results[0]?.rows || [],
+            Notices: results[1]?.rows || [],
+            Issues: results[2]?.rows || [],
+            Transactions: results[3]?.rows || [],
+            Documents: results[4]?.rows || [],
+            Voters: results[5]?.rows || [],
+            OpeningBalances: results[6]?.rows || [],
+            ChartOfAccounts: results[7]?.rows || [],
+            Tenants: results[8]?.rows || []
+          });
+        } catch (e) {
+          showToast('Failed to load data', 'error');
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      if (!session.token) {
+        return <LoginScreen onSuccess={s => { setSession(s); refreshData(); }} />;
+      }
+
+      const isAdmin = session.role === 'admin';
+
+const navItems = [
+  { id: 'dashboard', label: 'Dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+  { id: 'Directory', label: 'Directory', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
+  { id: 'Tenants', label: 'Tenants', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+  { id: 'Notices', label: 'Notices', icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9' },
+  { id: 'Issues', label: 'Issues', icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z' },
+  { id: 'Documents', label: 'Documents', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+  { id: 'Voters', label: 'Voters', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
+];
+
+      // Add admin-only menu items
+      if (isAdmin) {
+        navItems.push(
+          { id: 'Transactions', label: 'Transactions', icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+          { id: 'OpeningBalances', label: 'Opening Balances', icon: 'M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z' },
+          { id: 'ChartOfAccounts', label: 'Chart of Accounts', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01' }
+        );
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50">
+          <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
+            <div className="px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between h-16">
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => setSidebarOpen(!sidebarOpen)}
+                    className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                  </button>
+                  
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h1 className="text-lg font-semibold text-gray-900">Global Hillview</h1>
+                      <p className="text-xs text-gray-500">Sec-11, Sohna, Gurgaon</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={refreshData}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    title="Refresh data"
+                  >
+                    <svg className={`w-5 h-5 text-gray-600 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  </button>
+
+                  <div className="flex items-center gap-3 pl-3 border-l border-gray-200">
+                    <div className="text-right hidden sm:block">
+                      <p className="text-sm font-medium text-gray-900">{session.username}</p>
+                      <p className="text-xs text-gray-500 capitalize">{session.role}</p>
+                    </div>
+                    
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${session.role === 'admin' ? 'bg-blue-500' : 'bg-gray-500'}`}>
+                      {session.username[0].toUpperCase()}
+                    </div>
+                    
+                    <button
+                      onClick={() => {
+                        if (confirm('Are you sure you want to logout?')) {
+                          localStorage.removeItem('session');
+                          setSession({ token: null, role: null, username: null });
+                        }
+                      }}
+                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                      title="Logout"
+                    >
+                      <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          <div className="flex">
+            <aside className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:sticky top-16 left-0 z-20 w-64 h-[calc(100vh-4rem)] bg-white border-r border-gray-200 transition-transform duration-300`}>
+              <nav className="p-4 space-y-1">
+                {navItems.map(item => (
+                  <button
+                    key={item.id}
+                    onClick={() => { setView(item.id); setSidebarOpen(false); }}
+                    className={`nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left ${view === item.id ? 'active' : 'text-gray-700 hover:text-gray-900'}`}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={item.icon} />
+                    </svg>
+                    <span className="text-sm font-medium">{item.label}</span>
+                  </button>
+                ))}
+              </nav>
+            </aside>
+
+            {sidebarOpen && (
+              <div
+                onClick={() => setSidebarOpen(false)}
+                className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-10 top-16"
+              />
+            )}
+
+            <main className="flex-1 p-4 sm:p-6 lg:p-8">
+              {loading ? (
+                <div className="flex items-center justify-center h-64">
+                  <div className="spinner" />
+                </div>
+              ) : view === 'dashboard' ? (
+                <Dashboard data={data} onNavigate={setView} isAdmin={isAdmin} />
+              ) : view === 'Directory' ? (
+                <DirectoryPage data={data.Directory} isAdmin={isAdmin} onRefresh={refreshData} />
+              ) : view === 'Tenants' ? (
+                <TenantsPage data={data.Tenants} isAdmin={isAdmin} onRefresh={refreshData} />
+              ) : view === 'Issues' ? (
+                <IssuesPage data={data.Issues} isAdmin={isAdmin} onRefresh={refreshData} />
+              ) : view === 'Notices' ? (
+                <NoticesPage data={data.Notices} isAdmin={isAdmin} onRefresh={refreshData} />
+              ) : view === 'Transactions' ? (
+                isAdmin ? (
+                  <TransactionsPage data={data.Transactions} isAdmin={isAdmin} onRefresh={refreshData} chartOfAccounts={data.ChartOfAccounts} />
+                ) : (
+                  <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
+                    <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Access Restricted</h3>
+                    <p className="text-gray-600">This section is only available to administrators.</p>
+                  </div>
+                )
+              ) : view === 'Documents' ? (
+                <DocumentsPage data={data.Documents} isAdmin={isAdmin} onRefresh={refreshData} />
+              ) : view === 'Voters' ? (
+                <GenericTable title="Voters" data={data.Voters} isAdmin={isAdmin} onRefresh={refreshData} />
+              ) : view === 'OpeningBalances' ? (
+                isAdmin ? (
+                  <GenericTable title="Opening Balances" data={data.OpeningBalances} isAdmin={isAdmin} onRefresh={refreshData} />
+                ) : (
+                  <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
+                    <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Access Restricted</h3>
+                    <p className="text-gray-600">This section is only available to administrators.</p>
+                  </div>
+                )
+              ) : view === 'ChartOfAccounts' ? (
+                isAdmin ? (
+                  <GenericTable title="Chart of Accounts" data={data.ChartOfAccounts} isAdmin={isAdmin} onRefresh={refreshData} />
+                ) : (
+                  <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
+                    <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Access Restricted</h3>
+                    <p className="text-gray-600">This section is only available to administrators.</p>
+                  </div>
+                )
+              ) : (
+                <GenericTable title={view} data={data[view]} isAdmin={isAdmin} onRefresh={refreshData} />
+              )}
+            </main>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));    
+    root.render(<App />);;
   </script>
 </body>
 </html>
