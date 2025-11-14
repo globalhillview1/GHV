@@ -1,5 +1,5 @@
 // Cloudflare Pages Worker — API proxy only (no path rewrites that can loop)
-const GAS_API = 'https://script.google.com/macros/s/AKfycbxzoyXJNkqqxNZprAfvAzpsszrkAKXiposW1WjbqHO-4Wu_5fJk7hJ6HCqihF76TKED/exec';
+const GAS_API = 'https://script.google.com/macros/s/AKfycbwOscN4yvXLakGTrdzuNjR_OhkkQWnTjkh8dyaP1TT_HKFu4HZWVxvPw8gPZJSluas4/exec';
 
 export default {
   async fetch(request, env) {
